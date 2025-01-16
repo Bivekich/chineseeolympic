@@ -13,8 +13,7 @@ export default function Prizes() {
       title: '2 место',
       medal: '🥈',
       items: [
-        'Электронный сертификат на 20000 рублей',
-        'Полугодовая подписка на образовательную платформу',
+        'Электронный сертификат на 8000 рублей на обучение в "Эффективный китайский"',
         'Комплект учебной литературы',
         'Диплом призёра',
       ],
@@ -25,8 +24,7 @@ export default function Prizes() {
       title: '1 место',
       medal: '🥇',
       items: [
-        'Электронный сертификат на 30000 рублей',
-        'Годовая подписка на образовательную платформу',
+        'Электронный сертификат на 12000 рублей на обучение в "Эффективный китайский"',
         'Комплект учебной литературы',
         'Диплом победителя',
       ],
@@ -38,8 +36,7 @@ export default function Prizes() {
       title: '3 место',
       medal: '🥉',
       items: [
-        'Электронный сертификат на 10000 рублей',
-        'Трёхмесячная подписка на образовательную платформу',
+        'Электронный сертификат на 4000 рублей на обучение в "Эффективный китайский"',
         'Учебное пособие',
         'Диплом призёра',
       ],
@@ -70,30 +67,17 @@ export default function Prizes() {
         </motion.div>
 
         <div className="relative">
-          {/* Пьедестал */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={isInView ? { opacity: 1 } : {}}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-5xl h-48 flex justify-center items-end"
-          >
-            <div className="relative w-full flex justify-center items-end gap-4">
-              <div className="w-1/3 h-32 bg-gradient-to-t from-gray-200 to-gray-100 rounded-t-lg" />
-              <div className="w-1/3 h-40 bg-gradient-to-t from-red-600 to-red-500 rounded-t-lg" />
-              <div className="w-1/3 h-24 bg-gradient-to-t from-gray-200 to-gray-100 rounded-t-lg" />
-            </div>
-          </motion.div>
-
-          {/* Призовые карточки */}
-          <div className="grid grid-cols-3 gap-8 relative z-10">
+          <div className="flex flex-wrap justify-center gap-8 relative z-10">
             {prizes.map((prize, index) => (
               <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 100 }}
+                key={prize.title}
+                initial={{ opacity: 0, y: 50 }}
                 animate={isInView ? { opacity: 1, y: prize.translateY } : {}}
-                transition={{ duration: 0.6, delay: 0.2 * index }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className={`w-full md:w-[300px] ${
+                  prize.highlight ? 'md:-mt-8' : ''
+                }`}
                 style={{ order: prize.order }}
-                className="relative"
               >
                 <motion.div
                   whileHover={{ y: -5 }}

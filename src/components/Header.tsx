@@ -67,14 +67,16 @@ export default function Header() {
                 </Link>
               </motion.div>
             ))}
-            <motion.button
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: menuItems.length * 0.1 }}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-            >
-              Участвовать
-            </motion.button>
+            <Link href="/login">
+              <motion.button
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: menuItems.length * 0.1 }}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+              >
+                Участвовать
+              </motion.button>
+            </Link>
           </nav>
 
           {/* Мобильная кнопка меню */}
@@ -142,9 +144,16 @@ export default function Header() {
               transition={{ delay: menuItems.length * 0.1 }}
               className="pb-4"
             >
-              <button className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
-                Участвовать
-              </button>
+              <Link href="/login">
+                <motion.button
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: menuItems.length * 0.1 }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  Участвовать
+                </motion.button>
+              </Link>
             </motion.div>
           </nav>
         </motion.div>

@@ -15,6 +15,7 @@ export default function Footer() {
       { title: 'Как участвовать', href: '#how-it-works' },
       { title: 'Призы', href: '#prizes' },
       { title: 'Этапы', href: '#stages' },
+      { title: 'Контакты', href: '#contact' },
     ],
     info: [
       { title: 'Правила', href: '/rules' },

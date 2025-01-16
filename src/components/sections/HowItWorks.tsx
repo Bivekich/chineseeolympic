@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import { useRef } from 'react';
+import Link from 'next/link';
 
 export default function HowItWorks() {
   const ref = useRef(null);
@@ -26,7 +27,7 @@ export default function HowItWorks() {
     {
       number: '03',
       title: 'Подготовка',
-      description: 'Ознакомьтесь с форматом заданий и пройдите пробный тест',
+      description: 'Ознакомьтесь с форматом заданий',
       icon: '📝',
     },
     {
@@ -139,9 +140,16 @@ export default function HowItWorks() {
           transition={{ duration: 0.6, delay: 1 }}
           className="text-center mt-16"
         >
-          <button className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-300">
-            Начать участие
-          </button>
+          <Link href="/login">
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, delay: 1 }}
+              className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-300"
+            >
+              Начать участие
+            </motion.button>
+          </Link>
         </motion.div>
       </div>
     </section>

@@ -11,21 +11,15 @@ export default function Contact() {
   const contacts = [
     {
       title: 'Email',
-      value: 'info@hanyuzhixing.ru',
+      value: 'info@chinesestarolympics.ru',
       icon: '📧',
-      link: 'mailto:info@hanyuzhixing.ru',
+      link: 'mailto:info@chinesestarolympics.ru',
     },
     {
       title: 'Телефон',
-      value: '8 (800) 123-45-67',
+      value: '7 (913) 743-17-39',
       icon: '📞',
-      link: 'tel:+78001234567',
-    },
-    {
-      title: 'Адрес',
-      value: 'г. Москва, ул. Примерная, д. 1',
-      icon: '📍',
-      link: 'https://maps.google.com',
+      link: 'tel:+79137431739',
     },
   ];
 
@@ -58,7 +52,7 @@ export default function Contact() {
 
   return (
     <section
-      className="py-24 bg-gradient-to-b from-white to-red-50"
+      className="py-28 bg-gradient-to-b from-white to-red-50"
       id="contact"
       ref={ref}
     >
@@ -82,25 +76,21 @@ export default function Contact() {
             variants={containerVariants}
             initial="hidden"
             animate={isInView ? 'visible' : 'hidden'}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16"
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto mb-16"
           >
             {contacts.map((contact, index) => (
               <motion.a
                 key={index}
                 href={contact.link}
                 variants={itemVariants}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-8"
+                className="flex items-center justify-center gap-4 bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow"
               >
-                <div className="flex flex-col items-center text-center">
-                  <span className="text-4xl mb-4">{contact.icon}</span>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <span className="text-4xl">{contact.icon}</span>
+                <div>
+                  <h3 className="font-semibold text-gray-900">
                     {contact.title}
                   </h3>
-                  <p className="text-red-600 hover:text-red-700 transition-colors">
-                    {contact.value}
-                  </p>
+                  <p className="text-gray-600">{contact.value}</p>
                 </div>
               </motion.a>
             ))}
