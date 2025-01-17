@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function Hero() {
   return (
-    <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-red-900 via-red-800 to-red-900">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-red-900 via-red-800 to-red-900 px-4 py-20 md:py-0">
       {/* Декоративные элементы */}
       <div className="absolute inset-0 opacity-10">
         <Image
@@ -23,7 +23,7 @@ export default function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.15 }}
         transition={{ duration: 2 }}
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none hidden md:block"
       >
         {['学', '习', '中', '文'].map((char, i) => (
           <motion.div
@@ -43,7 +43,7 @@ export default function Hero() {
               },
               opacity: { duration: 1, delay: i * 0.2 },
             }}
-            className="absolute text-8xl text-white font-bold"
+            className="absolute text-6xl md:text-8xl text-white font-bold"
             style={{
               left: `${20 + i * 25}%`,
               top: `${30 + (i % 2) * 40}%`,
@@ -55,13 +55,13 @@ export default function Hero() {
         ))}
       </motion.div>
 
-      <div className="container mx-auto px-4 text-center relative z-10">
+      <div className="container mx-auto text-center relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1 className="text-7xl font-bold text-white mb-6">
+          <h1 className="text-4xl md:text-7xl font-bold text-white mb-6">
             <motion.span
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -74,7 +74,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.6 }}
-              className="block text-4xl"
+              className="block text-2xl md:text-4xl"
             >
               Олимпиада по китайскому языку
             </motion.span>
@@ -84,7 +84,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.9 }}
-            className="text-xl text-red-100/90 mb-12 max-w-2xl mx-auto"
+            className="text-lg md:text-xl text-red-100/90 mb-8 md:mb-12 max-w-2xl mx-auto px-4"
           >
             Раскройте свой потенциал в изучении китайского языка и культуры
           </motion.p>
@@ -93,22 +93,22 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 1.2 }}
-            className="flex gap-6 justify-center"
+            className="flex flex-col md:flex-row gap-4 md:gap-6 justify-center items-center"
           >
-            <Link href="/register">
+            <Link href="/register" className="w-full md:w-auto">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-red-500 hover:bg-red-400 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
+                className="w-full md:w-auto bg-red-500 hover:bg-red-400 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
               >
                 Регистрация
               </motion.button>
             </Link>
-            <Link href="#benefits">
+            <Link href="#benefits" className="w-full md:w-auto">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
+                className="w-full md:w-auto bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
               >
                 Узнать больше
               </motion.button>
@@ -121,7 +121,7 @@ export default function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.5, duration: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden md:block"
       >
         <motion.div
           animate={{ y: [0, 10, 0] }}

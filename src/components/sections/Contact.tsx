@@ -106,7 +106,7 @@ export default function Contact() {
               Остались вопросы?
             </h3>
             <form className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 text-black md:grid-cols-2 gap-6">
                 <motion.div variants={itemVariants} className="relative">
                   <input
                     type="text"
@@ -126,7 +126,7 @@ export default function Contact() {
                 <textarea
                   placeholder="Ваше сообщение"
                   rows={4}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 text-black focus:ring-2 focus:ring-red-200 outline-none transition-all"
                 ></textarea>
               </motion.div>
               <motion.div variants={itemVariants} className="text-center">
