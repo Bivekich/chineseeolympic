@@ -24,9 +24,16 @@ export default function Contact() {
   ];
 
   const socials = [
-    { name: 'VK', icon: '/vk.svg', link: '#' },
-    { name: 'Telegram', icon: '/telegram.svg', link: '#' },
-    { name: 'WeChat', icon: '/wechat.svg', link: '#' },
+    {
+      name: 'Telegram',
+      icon: '/telegram.svg',
+      link: 'https://t.me/uchukitaisky',
+    },
+    {
+      name: 'WeChat',
+      icon: '/wechat.svg',
+      link: 'https://u.wechat.com/kDvMRaDLCNF5B6ItXlcjM9Y',
+    },
   ];
 
   const containerVariants = {

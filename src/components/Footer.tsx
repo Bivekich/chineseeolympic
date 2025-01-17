@@ -24,9 +24,16 @@ export default function Footer() {
       { title: 'Условия использования', href: '/terms' },
     ],
     social: [
-      { title: 'VK', href: '#', icon: 'vk' },
-      { title: 'Telegram', href: '#', icon: 'telegram' },
-      { title: 'WeChat', href: '#', icon: 'wechat' },
+      {
+        title: 'Telegram',
+        href: 'https://t.me/uchukitaisky',
+        icon: 'telegram',
+      },
+      {
+        title: 'WeChat',
+        href: 'https://u.wechat.com/kDvMRaDLCNF5B6ItXlcjM9Y',
+        icon: 'wechat',
+      },
     ],
   };
 
