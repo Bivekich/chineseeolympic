@@ -1,23 +1,19 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import './globals.css';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import Preloader from '@/components/Preloader';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import Preloader from "@/components/Preloader";
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: '汉语之星 | Олимпиада по китайскому языку',
-  description: 'Всероссийская олимпиада по китайскому языку',
+  title: "汉语之星 | Олимпиада по китайскому языку",
+  description: "Всероссийская олимпиада по китайскому языку",
 };
 
 export default function RootLayout({
@@ -26,10 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className="scroll-smooth">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="ru" className={`scroll-smooth ${inter.variable}`}>
+      <body className="antialiased">
         <Preloader />
         <Header />
         <main>{children}</main>

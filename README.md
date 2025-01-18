@@ -1,37 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chinese Olympic - Authentication System
 
-## Getting Started
+This is the authentication system for the Chinese Olympic project. It includes email verification, login, and password reset functionality.
 
-First, run the development server:
+## Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create a `.env.local` file in the root directory with the following variables:
+
+```env
+# Database
+DATABASE_URL=your_neon_database_url
+
+# JWT
+JWT_SECRET=your_jwt_secret_at_least_32_chars_long
+
+# Email (Resend)
+RESEND_API_KEY=your_resend_api_key
+
+# App URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+3. Initialize the database:
+
+```bash
+npx drizzle-kit push:pg
+```
+
+4. Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- User registration with email verification
+- Login with email and password
+- Password reset functionality
+- Protected routes with middleware
+- JWT-based authentication
+- Secure password hashing
+- Email notifications for verification and password reset
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Drizzle ORM
+- Neon PostgreSQL
+- Resend for email
+- Jose for JWT
+- bcrypt for password hashing
 
-To learn more about Next.js, take a look at the following resources:
+## Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `DATABASE_URL`: Your Neon PostgreSQL database URL
+- `JWT_SECRET`: A secure secret key for JWT token generation (at least 32 characters)
+- `RESEND_API_KEY`: API key from Resend for sending emails
+- `NEXT_PUBLIC_APP_URL`: The public URL of your application
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Development
 
-## Deploy on Vercel
+The project uses Next.js App Router and follows a feature-based directory structure:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# chineseeolympic
+```
+src/
+  ├── app/
+  │   ├── api/
+  │   │   └── auth/
+  │   │       ├── login/
+  │   │       ├── register/
+  │   │       ├── verify-email/
+  │   │       ├── forgot-password/
+  │   │       └── reset-password/
+  │   ├── login/
+  │   ├── register/
+  │   ├── verify-email/
+  │   ├── forgot-password/
+  │   └── reset-password/
+  ├── components/
+  │   └── auth/
+  │       └── AuthForm.tsx
+  └── lib/
+      ├── db/
+      │   ├── index.ts
+      │   └── schema.ts
+      └── auth/
+          └── utils.ts
+```
