@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
   verificationToken: text("verification_token"),
   resetPasswordToken: text("reset_password_token"),
   resetPasswordExpires: timestamp("reset_password_expires"),
@@ -68,6 +69,7 @@ export const questions = pgTable("questions", {
   choices: text("choices"), // JSON array of choices for multiple choice questions
   matchingPairs: text("matching_pairs"), // JSON array of {left: string, right: string} for matching questions
   correctAnswer: text("correct_answer").notNull(), // For matching, this will be a JSON string of correct pairs
+  media: text("media"), // JSON object storing media info: {type: 'image'|'video'|'audio', url: string}
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

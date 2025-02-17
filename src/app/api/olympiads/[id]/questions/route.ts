@@ -18,7 +18,15 @@ export async function GET(
       where: eq(questions.olympiadId, params.id),
     });
 
-    return NextResponse.json(olympiadQuestions);
+    // Parse JSON strings back into arrays/objects
+    const parsedQuestions = olympiadQuestions.map((q) => ({
+      ...q,
+      choices: q.choices ? JSON.parse(q.choices) : null,
+      matchingPairs: q.matchingPairs ? JSON.parse(q.matchingPairs) : null,
+      media: q.media ? JSON.parse(q.media) : null,
+    }));
+
+    return NextResponse.json(parsedQuestions);
   } catch (error) {
     console.error("Error fetching questions:", error);
     return NextResponse.json(
@@ -49,13 +57,69 @@ export async function PUT(
     }
 
     for (const q of newQuestions) {
-      if (!q.question || !q.correctAnswer) {
+      if (!q.question) {
         return NextResponse.json(
           {
-            message: "All questions must have question text and correct answer",
+            message: "All questions must have question text",
           },
           { status: 400 }
         );
+      }
+
+      // Validate based on question type
+      switch (q.type) {
+        case "text":
+          if (!q.correctAnswer) {
+            return NextResponse.json(
+              {
+                message: "Text questions must have a correct answer",
+              },
+              { status: 400 }
+            );
+          }
+          break;
+
+        case "multiple_choice":
+          if (
+            !q.choices ||
+            !Array.isArray(q.choices) ||
+            q.choices.length < 2 ||
+            !q.correctAnswer
+          ) {
+            return NextResponse.json(
+              {
+                message:
+                  "Multiple choice questions must have at least 2 choices and a correct answer",
+              },
+              { status: 400 }
+            );
+          }
+          break;
+
+        case "matching":
+          if (
+            !q.matchingPairs ||
+            !Array.isArray(q.matchingPairs) ||
+            q.matchingPairs.length < 2
+          ) {
+            return NextResponse.json(
+              {
+                message: "Matching questions must have at least 2 pairs",
+              },
+              { status: 400 }
+            );
+          }
+          // For matching questions, set correctAnswer as stringified pairs
+          q.correctAnswer = JSON.stringify(q.matchingPairs);
+          break;
+
+        default:
+          return NextResponse.json(
+            {
+              message: "Invalid question type",
+            },
+            { status: 400 }
+          );
       }
     }
 
@@ -85,7 +149,13 @@ export async function PUT(
         newQuestions.map((q: any) => ({
           olympiadId: params.id,
           question: q.question,
+          type: q.type,
           correctAnswer: q.correctAnswer,
+          choices: q.choices ? JSON.stringify(q.choices) : null,
+          matchingPairs: q.matchingPairs
+            ? JSON.stringify(q.matchingPairs)
+            : null,
+          media: q.media ? JSON.stringify(q.media) : null,
         }))
       );
 

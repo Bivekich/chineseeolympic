@@ -8,6 +8,11 @@ interface MatchingPair {
   right: string;
 }
 
+interface QuestionMedia {
+  type: "image" | "video" | "audio";
+  url: string;
+}
+
 interface Question {
   id?: string;
   question: string;
@@ -15,6 +20,7 @@ interface Question {
   choices?: string[];
   matchingPairs?: MatchingPair[];
   correctAnswer: string;
+  media?: QuestionMedia;
 }
 
 interface Olympiad {
@@ -196,9 +202,77 @@ export default function AddQuestionsPage({
     }
   };
 
+  const handleMediaUpload = async (questionIndex: number, file: File) => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("questionIndex", questionIndex.toString());
+
+    try {
+      const response = await fetch(`/api/olympiads/${params.id}/media`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload media");
+      }
+
+      const data = await response.json();
+      const newQuestions = [...questions];
+      newQuestions[questionIndex] = {
+        ...newQuestions[questionIndex],
+        media: {
+          type: file.type.startsWith("image/")
+            ? "image"
+            : file.type.startsWith("video/")
+            ? "video"
+            : "audio",
+          url: data.url,
+        },
+      };
+      setQuestions(newQuestions);
+    } catch (error) {
+      console.error("Error uploading media:", error);
+      alert("Ошибка при загрузке медиафайла");
+    }
+  };
+
   const saveQuestions = async (publish: boolean = false) => {
-    if (questions.some((q) => !q.question || !q.correctAnswer)) {
-      alert("Пожалуйста, заполните все поля вопросов и ответов");
+    // Validate all questions based on their type
+    const invalidQuestions = questions.some((q) => {
+      if (!q.question) return true; // Question text is always required
+
+      switch (q.type) {
+        case "text":
+          return !q.correctAnswer;
+
+        case "multiple_choice":
+          return (
+            !q.choices ||
+            q.choices.some((choice) => !choice) || // Check if any choice is empty
+            !q.correctAnswer ||
+            !q.choices.includes(q.correctAnswer)
+          ); // Check if correct answer is one of the choices
+
+        case "matching":
+          if (!q.matchingPairs || q.matchingPairs.length < 2) return true;
+          return q.matchingPairs.some((pair) => !pair.left || !pair.right);
+
+        default:
+          return true;
+      }
+    });
+
+    if (invalidQuestions) {
+      alert(
+        "Пожалуйста, убедитесь что все вопросы заполнены корректно:\n" +
+          "- Текст вопроса обязателен\n" +
+          "- Для текстовых вопросов: укажите правильный ответ\n" +
+          "- Для вопросов с выбором: заполните все варианты ответов и укажите правильный\n" +
+          "- Для вопросов на сопоставление: заполните как минимум две пары"
+      );
       return;
     }
 
@@ -456,6 +530,69 @@ export default function AddQuestionsPage({
                         />
                       </div>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Медиафайл (изображение, видео или аудио)
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="file"
+                        accept="image/*,video/*,audio/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleMediaUpload(index, file);
+                          }
+                        }}
+                        className="block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-red-50 file:text-red-700
+                          hover:file:bg-red-100"
+                      />
+                      {question.media && (
+                        <div className="relative">
+                          {question.media.type === "image" && (
+                            <img
+                              src={question.media.url}
+                              alt="Question media"
+                              className="h-20 w-20 object-cover rounded-lg"
+                            />
+                          )}
+                          {question.media.type === "video" && (
+                            <video
+                              src={question.media.url}
+                              className="h-20 w-20 object-cover rounded-lg"
+                              controls
+                            />
+                          )}
+                          {question.media.type === "audio" && (
+                            <audio
+                              src={question.media.url}
+                              className="w-full"
+                              controls
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newQuestions = [...questions];
+                              newQuestions[index] = {
+                                ...newQuestions[index],
+                                media: undefined,
+                              };
+                              setQuestions(newQuestions);
+                            }}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center hover:bg-red-700"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

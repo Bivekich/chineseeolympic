@@ -5,6 +5,7 @@ import {
   questions,
   prizes,
   participantResults,
+  participantDetails,
 } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyAuth } from "@/lib/auth";
@@ -139,7 +140,12 @@ export async function DELETE(
 
     // Delete all related records in a transaction
     await db.transaction(async (tx) => {
-      // Delete participant results first (if any)
+      // Delete participant details first
+      await tx
+        .delete(participantDetails)
+        .where(eq(participantDetails.olympiadId, params.id));
+
+      // Delete participant results
       await tx
         .delete(participantResults)
         .where(eq(participantResults.olympiadId, params.id));

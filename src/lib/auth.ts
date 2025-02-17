@@ -1,11 +1,21 @@
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
+import { db } from "./db";
+import { users } from "./db/schema";
+import { eq } from "drizzle-orm";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 const AUTH_COOKIE = "auth-token";
 
 export async function createToken(userId: string) {
-  const token = await new SignJWT({ userId })
+  // Get user data including admin status
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
+  if (!user) throw new Error("User not found");
+
+  const token = await new SignJWT({ userId, isAdmin: user.isAdmin })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("24h")
     .sign(JWT_SECRET);
@@ -29,6 +39,18 @@ export async function verifyAuth() {
     return verified.payload.userId as string;
   } catch {
     return null;
+  }
+}
+
+export async function verifyAdmin() {
+  const token = cookies().get(AUTH_COOKIE)?.value;
+  if (!token) return false;
+
+  try {
+    const verified = await jwtVerify(token, JWT_SECRET);
+    return Boolean(verified.payload.isAdmin);
+  } catch {
+    return false;
   }
 }
 

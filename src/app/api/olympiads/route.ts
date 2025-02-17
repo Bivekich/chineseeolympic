@@ -1,14 +1,23 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { olympiads } from "@/lib/db/schema";
-import { verifyAuth } from "@/lib/auth";
+import { verifyAuth, verifyAdmin } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
     const userId = await verifyAuth();
+    const isAdmin = await verifyAdmin();
+
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { message: "Admin access required" },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();
@@ -68,8 +77,15 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const type = url.searchParams.get("type");
 
-    // If type is "created", return only olympiads created by the user
+    // If type is "created", verify admin status
     if (type === "created") {
+      const isAdmin = await verifyAdmin();
+      if (!isAdmin) {
+        return NextResponse.json(
+          { message: "Admin access required" },
+          { status: 403 }
+        );
+      }
       const createdOlympiads = await db
         .select()
         .from(olympiads)

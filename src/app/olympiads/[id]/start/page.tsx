@@ -15,6 +15,10 @@ interface Question {
   choices?: string[];
   matchingPairs?: MatchingPair[];
   correctAnswer: string;
+  media?: {
+    type: "image" | "video" | "audio";
+    url: string;
+  };
 }
 
 interface Olympiad {
@@ -26,6 +30,16 @@ interface Olympiad {
   duration: number;
   randomizeQuestions: boolean;
   questionsPerParticipant: number | null;
+}
+
+interface DragItem {
+  id: string;
+  content: string;
+}
+
+interface MatchingAnswer {
+  leftIndex: number;
+  rightIndex: number;
 }
 
 export default function StartOlympiadPage({
@@ -41,9 +55,20 @@ export default function StartOlympiadPage({
   const [matchingAnswers, setMatchingAnswers] = useState<{
     [key: string]: { [key: string]: string };
   }>({});
+  const [scrambledAnswers, setScrambledAnswers] = useState<{
+    [key: string]: DragItem[];
+  }>({});
+  const [draggedItem, setDraggedItem] = useState<DragItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0); // Will be set from olympiad.duration
+  const [matchingSelections, setMatchingSelections] = useState<{
+    [key: string]: MatchingAnswer[];
+  }>({});
+  const [selectedItem, setSelectedItem] = useState<{
+    side: "left" | "right";
+    index: number;
+  } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,9 +100,23 @@ export default function StartOlympiadPage({
           );
         }
 
+        // Initialize scrambled answers for matching questions
+        const initialScrambledAnswers: { [key: string]: DragItem[] } = {};
+        questionsData.forEach((q: Question) => {
+          if (q.type === "matching" && q.matchingPairs) {
+            initialScrambledAnswers[q.id] = q.matchingPairs
+              .map((pair) => ({
+                id: `${q.id}-${pair.right}`,
+                content: pair.right,
+              }))
+              .sort(() => Math.random() - 0.5);
+          }
+        });
+        setScrambledAnswers(initialScrambledAnswers);
+
         setOlympiad(olympiadData);
         setQuestions(questionsData);
-        setTimeLeft(olympiadData.duration); // Set timer from olympiad settings
+        setTimeLeft(olympiadData.duration);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -179,6 +218,135 @@ export default function StartOlympiadPage({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, item: DragItem) => {
+    setDraggedItem(item);
+    e.dataTransfer.setData("text/plain", item.content);
+    e.currentTarget.classList.add("opacity-50");
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("opacity-50");
+    setDraggedItem(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.add("bg-red-700/30");
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove("bg-red-700/30");
+  };
+
+  const handleDrop = (
+    e: React.DragEvent,
+    questionId: string,
+    leftItem: string
+  ) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("bg-red-700/30");
+
+    if (!draggedItem) return;
+
+    const newMatchingAnswers = {
+      ...matchingAnswers,
+      [questionId]: {
+        ...(matchingAnswers[questionId] || {}),
+        [leftItem]: draggedItem.content,
+      },
+    };
+
+    setMatchingAnswers(newMatchingAnswers);
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: JSON.stringify(newMatchingAnswers[questionId] || {}),
+    }));
+  };
+
+  const handleMatchingClick = (
+    questionId: string,
+    side: "left" | "right",
+    index: number
+  ) => {
+    if (!selectedItem) {
+      // First selection
+      setSelectedItem({ side, index });
+    } else if (selectedItem.side === side) {
+      // Clicked on same side - deselect
+      setSelectedItem(null);
+    } else {
+      // Matching attempt
+      const leftIndex = side === "left" ? index : selectedItem.index;
+      const rightIndex = side === "right" ? index : selectedItem.index;
+
+      // Remove any existing matches with these indices
+      const filteredMatches = (matchingSelections[questionId] || []).filter(
+        (match) =>
+          match.leftIndex !== leftIndex && match.rightIndex !== rightIndex
+      );
+
+      const newMatches = [...filteredMatches, { leftIndex, rightIndex }];
+
+      setMatchingSelections((prev) => ({
+        ...prev,
+        [questionId]: newMatches,
+      }));
+
+      // Convert to the format expected by the backend
+      const matchingPairs = currentQuestion.matchingPairs || [];
+      const matchingAnswersObj = newMatches.reduce(
+        (acc, match) => ({
+          ...acc,
+          [matchingPairs[match.leftIndex].left]:
+            matchingPairs[match.rightIndex].right,
+        }),
+        {}
+      );
+
+      setAnswers((prev) => ({
+        ...prev,
+        [questionId]: JSON.stringify(matchingAnswersObj),
+      }));
+
+      setSelectedItem(null);
+    }
+  };
+
+  const isItemSelected = (
+    questionId: string,
+    side: "left" | "right",
+    index: number
+  ) => {
+    return selectedItem?.side === side && selectedItem.index === index;
+  };
+
+  const isItemMatched = (
+    questionId: string,
+    side: "left" | "right",
+    index: number
+  ) => {
+    const matches = matchingSelections[questionId] || [];
+    return matches.some(
+      (match) =>
+        (side === "left" && match.leftIndex === index) ||
+        (side === "right" && match.rightIndex === index)
+    );
+  };
+
+  const getMatchedPair = (
+    questionId: string,
+    side: "left" | "right",
+    index: number
+  ) => {
+    const matches = matchingSelections[questionId] || [];
+    const match = matches.find(
+      (m) =>
+        (side === "left" && m.leftIndex === index) ||
+        (side === "right" && m.rightIndex === index)
+    );
+    return match;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900">
@@ -253,6 +421,33 @@ export default function StartOlympiadPage({
                   {currentQuestion.question}
                 </h3>
 
+                {/* Add media display */}
+                {currentQuestion.media && (
+                  <div className="mb-6">
+                    {currentQuestion.media.type === "image" && (
+                      <img
+                        src={currentQuestion.media.url}
+                        alt="Question media"
+                        className="max-w-full max-h-[400px] rounded-lg object-contain mx-auto"
+                      />
+                    )}
+                    {currentQuestion.media.type === "video" && (
+                      <video
+                        src={currentQuestion.media.url}
+                        controls
+                        className="max-w-full max-h-[400px] rounded-lg mx-auto"
+                      />
+                    )}
+                    {currentQuestion.media.type === "audio" && (
+                      <audio
+                        src={currentQuestion.media.url}
+                        controls
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+                )}
+
                 {currentQuestion.type === "multiple_choice" &&
                 currentQuestion.choices ? (
                   <div className="space-y-3">
@@ -287,46 +482,94 @@ export default function StartOlympiadPage({
                         {currentQuestion.matchingPairs.map((pair, index) => (
                           <div
                             key={`left-${index}`}
-                            className="p-3 bg-white/10 rounded-lg"
+                            onClick={() =>
+                              handleMatchingClick(
+                                currentQuestion.id,
+                                "left",
+                                index
+                              )
+                            }
+                            className={`p-4 rounded-lg transition-all cursor-pointer relative ${
+                              isItemSelected(currentQuestion.id, "left", index)
+                                ? "bg-red-700/50 border-2 border-red-200"
+                                : isItemMatched(
+                                    currentQuestion.id,
+                                    "left",
+                                    index
+                                  )
+                                ? "bg-white/20 border-2 border-green-400/50"
+                                : "bg-white/10 hover:bg-white/20"
+                            }`}
                           >
                             <span className="text-white">{pair.left}</span>
+                            {isItemMatched(
+                              currentQuestion.id,
+                              "left",
+                              index
+                            ) && (
+                              <div className="absolute right-0 top-0 h-full w-2 bg-green-400/50 rounded-r-lg" />
+                            )}
                           </div>
                         ))}
                       </div>
 
-                      {/* Right column - draggable/selectable items */}
+                      {/* Right column */}
                       <div className="space-y-4">
                         {currentQuestion.matchingPairs.map((pair, index) => (
-                          <select
+                          <div
                             key={`right-${index}`}
-                            value={
-                              matchingAnswers[currentQuestion.id]?.[
-                                currentQuestion.matchingPairs![index].left
-                              ] || ""
-                            }
-                            onChange={(e) =>
-                              handleMatchingChange(
+                            onClick={() =>
+                              handleMatchingClick(
                                 currentQuestion.id,
-                                currentQuestion.matchingPairs![index].left,
-                                e.target.value
+                                "right",
+                                index
                               )
                             }
-                            className="w-full p-3 bg-white/10 border border-red-200/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                            className={`p-4 rounded-lg transition-all cursor-pointer relative ${
+                              isItemSelected(currentQuestion.id, "right", index)
+                                ? "bg-red-700/50 border-2 border-red-200"
+                                : isItemMatched(
+                                    currentQuestion.id,
+                                    "right",
+                                    index
+                                  )
+                                ? "bg-white/20 border-2 border-green-400/50"
+                                : "bg-white/10 hover:bg-white/20"
+                            }`}
                           >
-                            <option value="">Выберите соответствие</option>
-                            {currentQuestion.matchingPairs.map((p, i) => (
-                              <option
-                                key={i}
-                                value={p.right}
-                                className="bg-red-900 text-white"
-                              >
-                                {p.right}
-                              </option>
-                            ))}
-                          </select>
+                            <span className="text-white">{pair.right}</span>
+                            {isItemMatched(
+                              currentQuestion.id,
+                              "right",
+                              index
+                            ) && (
+                              <div className="absolute left-0 top-0 h-full w-2 bg-green-400/50 rounded-l-lg" />
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
+
+                    {/* Clear matches button */}
+                    {matchingSelections[currentQuestion.id]?.length > 0 && (
+                      <div className="flex justify-center mt-4">
+                        <button
+                          onClick={() => {
+                            setMatchingSelections((prev) => ({
+                              ...prev,
+                              [currentQuestion.id]: [],
+                            }));
+                            setAnswers((prev) => ({
+                              ...prev,
+                              [currentQuestion.id]: JSON.stringify({}),
+                            }));
+                          }}
+                          className="px-4 py-2 text-sm text-red-200 bg-red-950/50 border border-red-200/20 rounded-lg hover:bg-red-900/50 transition-colors"
+                        >
+                          Очистить сопоставления
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <textarea
