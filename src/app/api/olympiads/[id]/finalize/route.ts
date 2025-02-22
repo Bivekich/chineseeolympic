@@ -1,16 +1,24 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { olympiads, participantResults, users, prizes, participantDetails } from "@/lib/db/schema";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-import { eq, and, desc } from "drizzle-orm";
-import { generateCertificate } from "@/lib/certificates";
-import { sendEmail } from "@/lib/email";
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import {
+  olympiads,
+  participantResults,
+  users,
+  prizes,
+  participantDetails,
+} from '@/lib/db/schema';
+import { cookies } from 'next/headers';
+import { jwtVerify } from 'jose';
+import { eq, and, desc } from 'drizzle-orm';
+import { generateCertificate } from '@/lib/certificates';
+import { sendEmail } from '@/lib/email';
+
+export const dynamic = 'force-dynamic';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 async function getUserId() {
-  const token = cookies().get("auth-token")?.value;
+  const token = cookies().get('auth-token')?.value;
   if (!token) return null;
 
   try {
@@ -28,14 +36,14 @@ export async function POST(
   try {
     const userId = await getUserId();
     if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     // Get the promo codes from the request body
     const { promoCodes } = await req.json();
     if (!promoCodes || !Array.isArray(promoCodes) || promoCodes.length !== 3) {
       return NextResponse.json(
-        { message: "Необходимо указать три промокода для победителей" },
+        { message: 'Необходимо указать три промокода для победителей' },
         { status: 400 }
       );
     }
@@ -47,18 +55,18 @@ export async function POST(
 
     if (!olympiad) {
       return NextResponse.json(
-        { message: "Олимпиада не найдена" },
+        { message: 'Олимпиада не найдена' },
         { status: 404 }
       );
     }
 
     if (olympiad.creatorId !== userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     if (olympiad.isCompleted) {
       return NextResponse.json(
-        { message: "Олимпиада уже завершена" },
+        { message: 'Олимпиада уже завершена' },
         { status: 400 }
       );
     }
@@ -82,11 +90,14 @@ export async function POST(
 
     console.log('\n=== Starting Olympiad Finalization ===');
     console.log('Total participants:', results.length);
-    console.log('Participant details:', results.map(r => ({
-      fullName: r.details.fullName,
-      email: r.details.email,
-      score: r.result.score
-    })));
+    console.log(
+      'Participant details:',
+      results.map((r) => ({
+        fullName: r.details.fullName,
+        email: r.details.email,
+        score: r.result.score,
+      }))
+    );
 
     // Create prizes for the top 3 participants
     await db.delete(prizes).where(eq(prizes.olympiadId, params.id)); // Remove any existing prizes
@@ -114,7 +125,7 @@ export async function POST(
       results.map(async ({ result, details }, index) => {
         const place = index + 1;
         const isWinner = place <= 3;
-        
+
         console.log(`\n=== Processing Participant ===`);
         console.log(`Full Name: ${details.fullName}`);
         console.log(`Email: ${details.email}`);
@@ -123,7 +134,9 @@ export async function POST(
         console.log(`Is Winner: ${isWinner}`);
 
         // Find matching prize for winners
-        const prize = isWinner ? olympiadPrizes.find(p => p.placement === place) : null;
+        const prize = isWinner
+          ? olympiadPrizes.find((p) => p.placement === place)
+          : null;
         if (isWinner) {
           console.log('Prize details:', prize);
         }
@@ -149,12 +162,14 @@ export async function POST(
         // Validate email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(details.email)) {
-          console.error(`Invalid email address for participant ${details.fullName}: ${details.email}`);
+          console.error(
+            `Invalid email address for participant ${details.fullName}: ${details.email}`
+          );
           return {
             ...result,
             place: place.toString(),
             certificateUrl,
-            emailError: 'Invalid email address'
+            emailError: 'Invalid email address',
           };
         }
 
@@ -169,13 +184,17 @@ export async function POST(
               <h1 style="margin: 0; font-size: 36px; margin-bottom: 10px;">汉语之星</h1>
               <p style="margin: 0; font-size: 20px;">Олимпиада по китайскому языку</p>
             </div>
-            
+
             <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <h2 style="color: #1f2937; margin-top: 0;">${isWinner ? "Поздравляем!" : "Спасибо за участие!"}</h2>
+              <h2 style="color: #1f2937; margin-top: 0;">${
+                isWinner ? 'Поздравляем!' : 'Спасибо за участие!'
+              }</h2>
               <p style="color: #4b5563;">Уважаемый(ая) ${details.fullName}!</p>
               <p style="color: #4b5563;">Олимпиада: ${olympiad.title}</p>
               <p style="color: #4b5563;">Ваш результат: ${result.score}%</p>
-              <p style="color: #4b5563;">Место: ${place} из ${results.length}</p>
+              <p style="color: #4b5563;">Место: ${place} из ${
+          results.length
+        }</p>
               ${
                 isWinner && prize
                   ? `<div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
@@ -183,17 +202,17 @@ export async function POST(
                       <p style="color: #92400e; margin: 10px 0;">🎁 Ваш приз: ${prize.description}</p>
                       <p style="color: #92400e; font-weight: bold; margin: 0;">🎫 Ваш промокод: ${prize.promoCode}</p>
                      </div>`
-                  : ""
+                  : ''
               }
               <p style="color: #4b5563; margin-top: 20px;">
-                Ваш сертификат доступен по ссылке: 
-                <a href="${certificateUrl}" 
+                Ваш сертификат доступен по ссылке:
+                <a href="${certificateUrl}"
                    style="color: #991b1b; text-decoration: none; padding: 8px 16px; background-color: #fee2e2; border-radius: 4px; display: inline-block; margin-top: 8px;">
                   Скачать сертификат
                 </a>
               </p>
             </div>
-            
+
             <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px;">
               <p>Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
             </div>
@@ -202,7 +221,11 @@ export async function POST(
 
         // Send email
         try {
-          console.log(`Sending email to ${details.email} (${isWinner ? 'Winner' : 'Participant'})`);
+          console.log(
+            `Sending email to ${details.email} (${
+              isWinner ? 'Winner' : 'Participant'
+            })`
+          );
           await sendEmail({
             to: details.email,
             subject: emailSubject,
@@ -229,9 +252,9 @@ export async function POST(
 
     return NextResponse.json(updatedResults);
   } catch (error) {
-    console.error("Error finalizing olympiad:", error);
+    console.error('Error finalizing olympiad:', error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { message: 'Internal Server Error' },
       { status: 500 }
     );
   }

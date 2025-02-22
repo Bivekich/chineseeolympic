@@ -19,8 +19,12 @@ DATABASE_URL=your_neon_database_url
 # JWT
 JWT_SECRET=your_jwt_secret_at_least_32_chars_long
 
-# Email (Resend)
-RESEND_API_KEY=your_resend_api_key
+# Email (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+SENDER_EMAIL=your_email@gmail.com
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -55,7 +59,7 @@ npm run dev
 - Tailwind CSS
 - Drizzle ORM
 - Neon PostgreSQL
-- Resend for email
+- Nodemailer for email
 - Jose for JWT
 - bcrypt for password hashing
 
@@ -63,7 +67,11 @@ npm run dev
 
 - `DATABASE_URL`: Your Neon PostgreSQL database URL
 - `JWT_SECRET`: A secure secret key for JWT token generation (at least 32 characters)
-- `RESEND_API_KEY`: API key from Resend for sending emails
+- `SMTP_HOST`: SMTP server host (e.g., smtp.gmail.com)
+- `SMTP_PORT`: SMTP server port (e.g., 465 for SSL)
+- `SMTP_USER`: SMTP username (your email)
+- `SMTP_PASSWORD`: SMTP password (for Gmail, use App Password)
+- `SENDER_EMAIL`: Email address to send from
 - `NEXT_PUBLIC_APP_URL`: The public URL of your application
 
 ## Development

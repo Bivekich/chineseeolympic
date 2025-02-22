@@ -1,15 +1,41 @@
-import { Resend } from "resend";
+import nodemailer from 'nodemailer';
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error("RESEND_API_KEY is not set in environment variables");
+if (!process.env.SMTP_HOST) {
+  throw new Error('SMTP_HOST is not set in environment variables');
+}
+
+if (!process.env.SMTP_PORT) {
+  throw new Error('SMTP_PORT is not set in environment variables');
+}
+
+if (!process.env.SMTP_USER) {
+  throw new Error('SMTP_USER is not set in environment variables');
+}
+
+if (!process.env.SMTP_PASSWORD) {
+  throw new Error('SMTP_PASSWORD is not set in environment variables');
 }
 
 if (!process.env.SENDER_EMAIL) {
-  throw new Error("SENDER_EMAIL is not set in environment variables");
+  throw new Error('SENDER_EMAIL is not set in environment variables');
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const SENDER_EMAIL = process.env.SENDER_EMAIL;
+
+// Создаем транспорт для отправки email
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT),
+  secure: false, // false для порта 25
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
+  },
+  tls: {
+    // Отключаем проверку сертификата для Timeweb Cloud
+    rejectUnauthorized: false,
+  },
+});
 
 interface SendEmailParams {
   to: string;
@@ -18,39 +44,29 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
-  console.log("\n=== Sending Email ===");
-  console.log("From:", SENDER_EMAIL);
-  console.log("To:", to);
-  console.log("Subject:", subject);
-  console.log("API Key present:", !!process.env.RESEND_API_KEY);
-  
+  console.log('\n=== Sending Email ===');
+  console.log('From:', SENDER_EMAIL);
+  console.log('To:', to);
+  console.log('Subject:', subject);
+
   try {
     if (!to || typeof to !== 'string') {
       throw new Error(`Invalid 'to' email address: ${to}`);
     }
 
-    const { data, error } = await resend.emails.send({
+    const info = await transporter.sendMail({
       from: SENDER_EMAIL,
       to,
       subject,
       html,
     });
 
-    if (error) {
-      console.error("\n=== Email Send Error ===");
-      console.error("Error details:", {
-        error: JSON.stringify(error),
-        message: error.message,
-      });
-      throw error;
-    }
-
-    console.log("\n=== Email Sent Successfully ===");
-    console.log("Response data:", data);
-    return data;
+    console.log('\n=== Email Sent Successfully ===');
+    console.log('Message ID:', info.messageId);
+    return info;
   } catch (error) {
-    console.error("\n=== Email Send Failed ===");
-    console.error("Error details:", {
+    console.error('\n=== Email Send Failed ===');
+    console.error('Error details:', {
       error: error instanceof Error ? error.message : JSON.stringify(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
