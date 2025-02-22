@@ -49,10 +49,11 @@ export async function PUT(
       );
     }
 
+    // Only validate placement, promoCode is now optional
     for (const prize of newPrizes) {
-      if (!prize.promoCode || !prize.placement) {
+      if (!prize.placement) {
         return NextResponse.json(
-          { message: "All prizes must have a placement and promo code" },
+          { message: "All prizes must have a placement" },
           { status: 400 }
         );
       }
@@ -84,7 +85,7 @@ export async function PUT(
         newPrizes.map((prize: any) => ({
           olympiadId: params.id,
           placement: prize.placement,
-          promoCode: prize.promoCode,
+          promoCode: prize.promoCode || null, // Make promoCode optional
           description: prize.description,
         }))
       );

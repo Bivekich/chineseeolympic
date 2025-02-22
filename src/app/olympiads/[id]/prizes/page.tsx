@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ChineseLoader from "@/components/ChineseLoader";
 
 interface Prize {
   id?: string;
   placement: number;
-  promoCode: string;
+  promoCode?: string | null;
   description?: string;
 }
 
@@ -25,12 +26,13 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [prizes, setPrizes] = useState<Prize[]>([
-    { placement: 1, promoCode: "", description: "Первое место" },
-    { placement: 2, promoCode: "", description: "Второе место" },
-    { placement: 3, promoCode: "", description: "Третье место" },
+    { placement: 1, description: "Первое место" },
+    { placement: 2, description: "Второе место" },
+    { placement: 3, description: "Третье место" },
   ]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOlympiad = async () => {
@@ -51,11 +53,12 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
             }
           }
         } else {
-          throw new Error("Failed to fetch olympiad");
+          const error = await olympiadResponse.json();
+          throw new Error(error.message || "Failed to fetch olympiad");
         }
       } catch (error) {
         console.error("Error fetching data:", error);
-        alert("Ошибка при загрузке данных");
+        setError(error instanceof Error ? error.message : "Failed to load data");
       } finally {
         setIsLoading(false);
       }
@@ -82,7 +85,6 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
       ...prizes,
       {
         placement: prizes.length + 1,
-        promoCode: "",
         description: `${prizes.length + 1}-е место`,
       },
     ]);
@@ -96,11 +98,7 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
   };
 
   const handleSubmit = async (publish: boolean = false) => {
-    if (prizes.some((p) => !p.promoCode)) {
-      alert("Пожалуйста, заполните все промокоды");
-      return;
-    }
-
+    setError(null);
     setIsSaving(true);
     try {
       const response = await fetch(`/api/olympiads/${params.id}/prizes`, {
@@ -109,7 +107,10 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prizes,
+          prizes: prizes.map(prize => ({
+            ...prize,
+            promoCode: prize.promoCode || null,
+          })),
           publish,
         }),
       });
@@ -120,15 +121,13 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
       }
 
       if (publish) {
-        // Add a delay to ensure the database is updated
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        // Verify the olympiad state before redirecting
         const verifyResponse = await fetch(`/api/olympiads/${params.id}`);
         if (!verifyResponse.ok) {
           throw new Error("Failed to verify olympiad state");
         }
         const olympiadState = await verifyResponse.json();
-        if (!olympiadState.hasPrizes) {
+        if (!olympiadState.hasPrizes || olympiadState.isDraft) {
           throw new Error("Failed to update olympiad state");
         }
         router.push("/dashboard");
@@ -137,26 +136,22 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
       }
     } catch (error) {
       console.error("Error saving prizes:", error);
-      alert(error instanceof Error ? error.message : "Failed to save prizes");
+      setError(error instanceof Error ? error.message : "Failed to save prizes");
     } finally {
       setIsSaving(false);
     }
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-gray-600">Загрузка...</div>
-      </div>
-    );
+    return <ChineseLoader text="Загрузка..." />;
+  }
+
+  if (error) {
+    return <ChineseLoader text={error} />;
   }
 
   if (!olympiad) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-red-600">Олимпиада не найдена</div>
-      </div>
-    );
+    return <ChineseLoader text="Олимпиада не найдена" />;
   }
 
   return (
@@ -168,78 +163,44 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
               <span className="text-red-800">汉语</span>
               <span className="text-gray-800">{olympiad.title}</span>
             </h1>
-            <p className="mt-2 text-gray-600">
-              Настройте призы и промокоды для победителей
-            </p>
+            <p className="mt-2 text-gray-600">Укажите описание для каждого призового места. Промокоды указывать не надо.</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8">
-            <div className="space-y-8">
+            <form className="space-y-6">
               {prizes.map((prize, index) => (
                 <div
                   key={index}
-                  className="p-6 bg-gray-50 rounded-xl space-y-4"
+                  className="bg-gray-50 rounded-xl p-6 space-y-4 relative"
                 >
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {prize.description || `${prize.placement}-е место`}
-                    </h3>
-                    {prizes.length > 1 && index > 2 && (
+                  <div className="absolute top-4 right-4">
+                    {prizes.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removePrize(index)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-500 hover:text-red-700 transition-colors"
                       >
                         Удалить
                       </button>
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Место
-                    </label>
-                    <input
-                      type="number"
-                      value={prize.placement}
-                      onChange={(e) =>
-                        handlePrizeChange(index, "placement", e.target.value)
-                      }
-                      min="1"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-gray-900"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Промокод
-                    </label>
-                    <input
-                      type="text"
-                      value={prize.promoCode}
-                      onChange={(e) =>
-                        handlePrizeChange(index, "promoCode", e.target.value)
-                      }
-                      placeholder="Например: WINNER2024_1"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-gray-900 placeholder-gray-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Описание (необязательно)
-                    </label>
-                    <input
-                      type="text"
-                      value={prize.description || ""}
-                      onChange={(e) =>
-                        handlePrizeChange(index, "description", e.target.value)
-                      }
-                      placeholder="Например: Первое место - золотая медаль"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-gray-900 placeholder-gray-500"
-                    />
+                  <div className="grid grid-cols-1 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Описание
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={prize.description || ""}
+                        onChange={(e) =>
+                          handlePrizeChange(index, "description", e.target.value)
+                        }
+                        placeholder="Например: Первое место - Промокод на 1000 рублей"
+                        className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-gray-900 placeholder-gray-500"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -252,7 +213,7 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
                 + Добавить приз
               </button>
 
-              <div className="flex justify-end space-x-4 pt-6">
+              <div className="flex justify-end space-x-4 mt-8">
                 <button
                   type="button"
                   onClick={() => router.back()}
@@ -262,22 +223,14 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSubmit(false)}
-                  disabled={isSaving}
-                  className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                >
-                  {isSaving ? "Сохранение..." : "Сохранить черновик"}
-                </button>
-                <button
-                  type="button"
                   onClick={() => handleSubmit(true)}
-                  disabled={isSaving}
+                  disabled={isSaving || !olympiad?.hasQuestions}
                   className="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-red-800 to-red-700 rounded-lg hover:from-red-700 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-lg transform transition hover:-translate-y-0.5"
                 >
-                  {isSaving ? "Публикация..." : "Опубликовать олимпиаду"}
+                  {isSaving ? "Сохранение..." : "Опубликовать"}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import ChineseLoader from "@/components/ChineseLoader";
 
 export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
@@ -78,10 +79,7 @@ export default function VerifyEmailPage() {
 
           <div className="bg-white/5 backdrop-blur-sm p-8 rounded-lg shadow-xl border border-white/10">
             {status === "loading" && (
-              <div className="flex flex-col items-center space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-                <p className="text-white/80">Подтверждаем ваш email...</p>
-              </div>
+              <ChineseLoader text="Подтверждаем ваш email..." />
             )}
 
             {status === "success" && (

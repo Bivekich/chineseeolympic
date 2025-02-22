@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
+import ChineseLoader from "@/components/ChineseLoader";
 interface MatchingPair {
   left: string;
   right: string;
@@ -14,7 +14,7 @@ interface QuestionMedia {
 }
 
 interface Question {
-  id?: string;
+  id?: string;  
   question: string;
   type: "text" | "multiple_choice" | "matching";
   choices?: string[];
@@ -309,7 +309,7 @@ export default function AddQuestionsPage({
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-gray-600">Загрузка...</div>
+        <ChineseLoader text="Загрузка..." />
       </div>
     );
   }
@@ -615,19 +615,11 @@ export default function AddQuestionsPage({
                 </button>
                 <button
                   type="button"
-                  onClick={() => saveQuestions(false)}
-                  disabled={isSaving}
-                  className="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                >
-                  {isSaving ? "Сохранение..." : "Сохранить черновик"}
-                </button>
-                <button
-                  type="button"
                   onClick={() => saveQuestions(true)}
                   disabled={isSaving}
                   className="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-red-800 to-red-700 rounded-lg hover:from-red-700 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-lg transform transition hover:-translate-y-0.5"
                 >
-                  {isSaving ? "Публикация..." : "Опубликовать олимпиаду"}
+                  {isSaving ? "Сохранение..." : "Дальше"}
                 </button>
               </div>
             </div>

@@ -4,6 +4,7 @@ import {
   timestamp,
   boolean,
   integer,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -27,6 +28,7 @@ export const olympiads = pgTable("olympiads", {
     .$defaultFn(() => createId())
     .primaryKey(),
   title: text("title").notNull(),
+  description: text("description"),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   level: text("level").notNull(), // difficulty level
@@ -40,6 +42,7 @@ export const olympiads = pgTable("olympiads", {
   duration: integer("duration").notNull().default(7200), // Duration in seconds, default 2 hours
   randomizeQuestions: boolean("randomize_questions").default(false).notNull(),
   questionsPerParticipant: integer("questions_per_participant"), // null means all questions
+  price: integer("price").notNull().default(0), // Price in kopeks (1 ruble = 100 kopeks)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -52,7 +55,7 @@ export const prizes = pgTable("prizes", {
     .notNull()
     .references(() => olympiads.id),
   placement: integer("placement").notNull(), // 1 for first place, 2 for second, etc.
-  promoCode: text("promo_code").notNull(),
+  promoCode: text("promo_code"), // Making promo code optional
   description: text("description"), // Optional description of the prize
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -101,9 +104,33 @@ export const participantDetails = pgTable("participant_details", {
     .notNull()
     .references(() => olympiads.id),
   fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  country: text("country").notNull(),
+  city: text("city").notNull(),
+  age: integer("age").notNull(),
   educationType: text("education_type").notNull(),
   grade: text("grade"),
   institutionName: text("institution_name"),
   phoneNumber: text("phone_number").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const payments = pgTable("payments", {
+  id: text("id")
+    .$defaultFn(() => createId())
+    .primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  olympiadId: text("olympiad_id")
+    .notNull()
+    .references(() => olympiads.id),
+  amount: integer("amount").notNull(),
+  status: text("status", { enum: ["pending", "completed", "failed"] })
+    .notNull()
+    .default("pending"),
+  paymentId: text("payment_id"),
+  paymentUrl: text("payment_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

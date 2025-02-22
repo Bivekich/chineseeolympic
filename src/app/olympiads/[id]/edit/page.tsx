@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ChineseLoader from "@/components/ChineseLoader";
 
 interface Olympiad {
   id: string;
@@ -87,19 +88,11 @@ export default function EditOlympiadPage({
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-gray-600">Загрузка...</div>
-      </div>
-    );
+    return <ChineseLoader text="Загрузка..." />;
   }
 
   if (!olympiad) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-red-600">Олимпиада не найдена</div>
-      </div>
-    );
+    return <ChineseLoader text="Олимпиада не найдена" />;
   }
 
   return (

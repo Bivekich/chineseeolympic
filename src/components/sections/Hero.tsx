@@ -2,12 +2,21 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-red-900 via-red-800 to-red-900 px-4 py-20 md:py-0">
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10 bg-pattern" />
+      <div className="absolute inset-0 opacity-[0.1]">
+        <Image
+          src="/chinese-pattern.png"
+          alt="Chinese Pattern"
+          fill
+          className="object-cover"
+          priority
+        />
+      </div>
 
       {/* Плавающие иероглифы */}
       <motion.div

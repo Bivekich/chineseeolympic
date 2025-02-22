@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ChineseLoader from "@/components/ChineseLoader";
 
 interface Result {
   id: string;
@@ -38,31 +39,11 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   }, [params.id]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900">
-        <div className="p-8 mt-[80px] md:mt-[100px]">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center">
-              <p className="text-red-200/80">Загрузка результатов...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ChineseLoader text="Загрузка результатов..." />;
   }
 
   if (!result) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900">
-        <div className="p-8 mt-[80px] md:mt-[100px]">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center">
-              <p className="text-red-200">Результаты не найдены</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ChineseLoader text="Результаты не найдены" />;
   }
 
   return (

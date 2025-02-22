@@ -1,0 +1,1 @@
+ALTER TABLE "participant_results" ALTER COLUMN "completed_at" SET DEFAULT now();

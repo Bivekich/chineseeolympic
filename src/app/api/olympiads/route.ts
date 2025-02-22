@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, level, startDate, endDate } = body;
+    const { title, description, level, startDate, endDate, duration, randomizeQuestions, questionsPerParticipant, price } = body;
 
     // Validate required fields
     if (!title || !level || !startDate || !endDate) {
@@ -46,6 +46,7 @@ export async function POST(req: Request) {
       .insert(olympiads)
       .values({
         title,
+        description,
         level,
         startDate: start,
         endDate: end,
@@ -54,6 +55,10 @@ export async function POST(req: Request) {
         hasQuestions: false,
         hasPrizes: false,
         isCompleted: false,
+        duration: duration || 7200, // Use provided duration or default to 2 hours (7200 seconds)
+        randomizeQuestions: randomizeQuestions || false,
+        questionsPerParticipant: questionsPerParticipant || null,
+        price: price || 0, // Add price field with default 0
       })
       .returning();
 

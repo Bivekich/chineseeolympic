@@ -8,6 +8,48 @@
       "when": 1739095540828,
       "tag": "0000_adorable_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1740028900704,
+      "tag": "0001_rapid_luminals",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1740030057704,
+      "tag": "0002_confused_fabian_cortez",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1740043409373,
+      "tag": "0003_glossy_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1740134343311,
+      "tag": "0004_curious_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1740135409929,
+      "tag": "0005_freezing_eternity",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1740156263196,
+      "tag": "0006_nosy_xorn",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ChineseLoader from "@/components/ChineseLoader";
 
 interface MatchingPair {
   left: string;
@@ -129,8 +130,11 @@ export default function StartOlympiadPage({
 
   // Timer effect
   useEffect(() => {
+    // Only start the timer and check for auto-submit if we've loaded the olympiad
+    if (!olympiad) return;
+
     if (timeLeft <= 0) {
-      handleSubmit();
+      handleSubmit(true); // Skip confirmation when timer runs out
       return;
     }
 
@@ -139,7 +143,7 @@ export default function StartOlympiadPage({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [timeLeft, olympiad]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -190,10 +194,12 @@ export default function StartOlympiadPage({
     }
   };
 
-  const handleSubmit = async () => {
-    if (!confirm("Вы уверены, что хотите завершить олимпиаду?")) {
+  const handleSubmit = async (skipConfirmation: boolean = false) => {
+    if (!skipConfirmation && !confirm("Вы уверены, что хотите завершить олимпиаду?")) {
       return;
     }
+
+    if (isSubmitting) return; // Prevent multiple submissions
 
     setIsSubmitting(true);
     try {
@@ -348,31 +354,11 @@ export default function StartOlympiadPage({
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900">
-        <div className="p-8 mt-[80px] md:mt-[100px]">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center">
-              <p className="text-red-200/80">Загрузка...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ChineseLoader text="Загрузка..." />;
   }
 
   if (!olympiad || questions.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900">
-        <div className="p-8 mt-[80px] md:mt-[100px]">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center">
-              <p className="text-red-200">Олимпиада не найдена</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ChineseLoader text="Олимпиада не найдена" />;
   }
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -596,7 +582,7 @@ export default function StartOlympiadPage({
             </button>
 
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(false)}
               disabled={isSubmitting}
               className="px-6 py-3 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-500 transition-colors disabled:opacity-50"
             >

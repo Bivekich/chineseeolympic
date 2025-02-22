@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ChineseLoader from "@/components/ChineseLoader";
 
 export default function CreateOlympiadPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [level, setLevel] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [duration, setDuration] = useState("120"); // Default 120 minutes
   const [randomizeQuestions, setRandomizeQuestions] = useState(false);
   const [questionsPerParticipant, setQuestionsPerParticipant] = useState("");
+  const [price, setPrice] = useState("0"); // New state for price
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,6 +29,7 @@ export default function CreateOlympiadPage() {
         },
         body: JSON.stringify({
           title,
+          description,
           level,
           startDate,
           endDate,
@@ -34,6 +38,7 @@ export default function CreateOlympiadPage() {
           questionsPerParticipant: questionsPerParticipant
             ? parseInt(questionsPerParticipant)
             : null,
+          price: Math.round(parseFloat(price) * 100), // Convert rubles to kopeks
         }),
       });
 
@@ -43,18 +48,19 @@ export default function CreateOlympiadPage() {
       }
 
       const olympiad = await response.json();
-      // Add a delay to ensure the olympiad is created in the database
-      await new Promise((resolve) => setTimeout(resolve, 500));
       router.push(`/olympiads/${olympiad.id}/questions`);
     } catch (error) {
       console.error("Error creating olympiad:", error);
       alert(
         error instanceof Error ? error.message : "Failed to create olympiad"
       );
-    } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isSubmitting) {
+    return <ChineseLoader text="Создание олимпиады..." />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900">
@@ -85,6 +91,20 @@ export default function CreateOlympiadPage() {
                     className="w-full px-4 py-3 bg-white/10 border border-red-200/10 rounded-lg text-white placeholder-red-200/50 focus:outline-none focus:ring-2 focus:ring-red-500"
                     placeholder="Например: Осенняя олимпиада 2024"
                     required
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-red-200 mb-2">
+                    Описание олимпиады
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-red-200/10 rounded-lg text-white placeholder-red-200/50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Опишите олимпиаду, ее цели и особенности"
+                    rows={4}
                   />
                 </div>
 
@@ -195,6 +215,24 @@ export default function CreateOlympiadPage() {
                       вопросы
                     </p>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-red-200 mb-2">
+                    Стоимость участия (в рублях)
+                  </label>
+                  <input
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-3 bg-white/10 border border-red-200/10 rounded-lg text-white placeholder-red-200/50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="0"
+                  />
+                  <p className="mt-1 text-sm text-red-200/60">
+                    Оставьте 0, чтобы сделать олимпиаду бесплатной
+                  </p>
                 </div>
               </div>
             </div>

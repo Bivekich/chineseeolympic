@@ -6,9 +6,10 @@ import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import fs from "fs";
 import path from "path";
+import { writeFile } from "fs/promises";
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(process.cwd(), "public", "uploads");
+const uploadsDir = path.join(process.cwd(), "public", "uploads", "olympiad-media");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -58,6 +59,15 @@ export async function POST(
       );
     }
 
+    // Validate file size (50MB limit)
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { message: "File size exceeds 50MB limit" },
+        { status: 400 }
+      );
+    }
+
     // Generate a unique filename
     const fileExtension = file.name.split(".").pop();
     const uniqueFilename = `${createId()}.${fileExtension}`;
@@ -66,13 +76,32 @@ export async function POST(
     // Convert File to Buffer and save
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    fs.writeFileSync(filePath, buffer);
+    await writeFile(filePath, buffer);
 
-    // Return the URL that will be accessible through your server
-    const fileUrl = `/uploads/${uniqueFilename}`;
-    return NextResponse.json({ url: fileUrl });
+    // Determine media type
+    let mediaType: "image" | "video" | "audio";
+    if (fileType.startsWith("image/")) {
+      mediaType = "image";
+    } else if (fileType.startsWith("video/")) {
+      mediaType = "video";
+    } else if (fileType.startsWith("audio/")) {
+      mediaType = "audio";
+    } else {
+      // This shouldn't happen due to earlier validation, but just in case
+      return NextResponse.json(
+        { message: "Invalid file type" },
+        { status: 400 }
+      );
+    }
+
+    // Return the file URL and type
+    return NextResponse.json({
+      url: `/uploads/olympiad-media/${uniqueFilename}`,
+      type: mediaType
+    });
+
   } catch (error) {
-    console.error("Error uploading media:", error);
+    console.error("Error uploading file:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }

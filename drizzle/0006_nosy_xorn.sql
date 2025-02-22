@@ -1,0 +1,1 @@
+ALTER TABLE "prizes" ALTER COLUMN "promo_code" DROP NOT NULL;

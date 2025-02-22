@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { participantResults, questions } from "@/lib/db/schema";
 import { verifyAuth } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export async function POST(
   request: Request,
@@ -31,54 +31,118 @@ export async function POST(
 
     // Calculate score
     let correctAnswers = 0;
+    console.log("\n=== Starting Score Calculation ===");
+    
     for (const question of olympiadQuestions) {
+      console.log(`\nQuestion ${question.id} (Type: ${question.type}):`);
+      console.log("Question text:", question.question);
+      
       const userAnswer = answers[question.id]?.trim() || "";
       const correctAnswer = question.correctAnswer.trim();
+      
+      let isCorrect = false;
 
       if (question.type === "multiple_choice") {
         // For multiple choice, do exact match
-        if (userAnswer === correctAnswer) {
-          correctAnswers++;
-        }
+        console.log("Multiple Choice - Comparing:");
+        console.log("User answer:", userAnswer);
+        console.log("Correct answer:", correctAnswer);
+        isCorrect = userAnswer === correctAnswer;
+        
       } else if (question.type === "matching") {
         try {
-          // Parse the user's answers and the matching pairs
-          const userAnswers = JSON.parse(userAnswer);
+          // Parse the user's answers (which should be a JSON string of an object)
+          const userAnswersObj = JSON.parse(userAnswer);
           const matchingPairs = JSON.parse(question.matchingPairs || "[]");
+          
+          console.log("Matching - Comparing:");
+          console.log("User answers:", JSON.stringify(userAnswersObj, null, 2));
+          console.log("Correct pairs:", JSON.stringify(matchingPairs, null, 2));
 
           // Check if all pairs match correctly
-          const isCorrect = userAnswers.every((answer: any, index: number) => {
-            const userLeftItem = matchingPairs[index].left;
-            const userRightItem = userAnswers[userLeftItem];
-            return userRightItem === matchingPairs[index].right;
-          });
-
-          if (isCorrect) {
-            correctAnswers++;
+          let allPairsCorrect = true;
+          for (const pair of matchingPairs) {
+            const userRightItem = userAnswersObj[pair.left];
+            console.log(`Checking pair - Left: "${pair.left}"`);
+            console.log(`User matched with: "${userRightItem}"`);
+            console.log(`Expected match: "${pair.right}"`);
+            
+            if (userRightItem !== pair.right) {
+              console.log("❌ This pair is incorrect");
+              allPairsCorrect = false;
+              break;
+            } else {
+              console.log("✓ This pair is correct");
+            }
           }
+
+          isCorrect = allPairsCorrect;
+          
         } catch (error) {
-          console.error("Error evaluating matching answers:", error);
+          console.error("Error evaluating matching answers for question", question.id, ":", error);
+          console.error("Raw user answer:", userAnswer);
+          console.error("Raw matching pairs:", question.matchingPairs);
+          isCorrect = false;
         }
       } else {
         // For text questions, do case-insensitive comparison
-        if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
-          correctAnswers++;
-        }
+        console.log("Text Question - Comparing:");
+        console.log("User answer (lowercase):", userAnswer.toLowerCase());
+        console.log("Correct answer (lowercase):", correctAnswer.toLowerCase());
+        isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+      }
+
+      if (isCorrect) {
+        correctAnswers++;
+        console.log("✓ Question marked as CORRECT");
+      } else {
+        console.log("❌ Question marked as INCORRECT");
       }
     }
 
+    console.log("\n=== Final Score Calculation ===");
+    console.log("Total questions:", olympiadQuestions.length);
+    console.log("Correct answers:", correctAnswers);
     const score = Math.round((correctAnswers / olympiadQuestions.length) * 100);
+    console.log("Final score:", score);
 
-    // Save results
-    const [result] = await db
-      .insert(participantResults)
-      .values({
-        userId,
-        olympiadId: params.id,
-        score: score.toString(),
-        answers: JSON.stringify(answers),
-      })
-      .returning();
+    // Check if user already has a result for this olympiad
+    const existingResult = await db
+      .select()
+      .from(participantResults)
+      .where(
+        and(
+          eq(participantResults.userId, userId),
+          eq(participantResults.olympiadId, params.id)
+        )
+      )
+      .then(res => res[0]);
+
+    let result;
+    if (existingResult) {
+      // Update existing result but keep original completion time
+      [result] = await db
+        .update(participantResults)
+        .set({
+          score: score.toString(),
+          answers: JSON.stringify(answers),
+        })
+        .where(eq(participantResults.id, existingResult.id))
+        .returning();
+    } else {
+      // Create new result with current completion time
+      const now = new Date();
+      [result] = await db
+        .insert(participantResults)
+        .values({
+          userId,
+          olympiadId: params.id,
+          score: score.toString(),
+          answers: JSON.stringify(answers),
+          completedAt: now,
+        })
+        .returning();
+    }
 
     return NextResponse.json(result);
   } catch (error) {

@@ -11,18 +11,27 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("Fetching participated olympiads for user:", userId); // Debug log
+    console.log("Fetching participated olympiads for user:", userId);
 
     const results = await db
       .select({
-        result: participantResults,
-        olympiad: olympiads,
+        id: participantResults.id,
+        score: participantResults.score,
+        olympiad: {
+          id: olympiads.id,
+          title: olympiads.title,
+          level: olympiads.level,
+          startDate: olympiads.startDate,
+          endDate: olympiads.endDate,
+          isCompleted: olympiads.isCompleted,
+        },
       })
       .from(participantResults)
       .innerJoin(olympiads, eq(participantResults.olympiadId, olympiads.id))
-      .where(eq(participantResults.userId, userId));
+      .where(eq(participantResults.userId, userId))
+      .orderBy(participantResults.completedAt);
 
-    console.log("Found results:", results); // Debug log
+    console.log("Found results:", results);
 
     return NextResponse.json(results);
   } catch (error) {
