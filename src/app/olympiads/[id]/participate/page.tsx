@@ -47,9 +47,9 @@ export default function ParticipateOlympiadPage({
         }
         const data = await response.json();
         console.log("Olympiad data:", data);
-        setOlympiad(data);
-        const requiresPayment = data.price > 0;
-        console.log("Price:", data.price, "Requires payment:", requiresPayment);
+        setOlympiad(data[0]);
+        const requiresPayment = data[0].price > 0;
+        console.log("Price:", data[0].price, "Requires payment:", requiresPayment);
         setPaymentRequired(requiresPayment);
       } catch (error) {
         console.error("Error fetching olympiad:", error);
@@ -102,11 +102,18 @@ export default function ParticipateOlympiadPage({
         if (!paymentResponse.ok) {
           const errorData = await paymentResponse.json();
           console.error("Payment creation failed:", errorData);
-          throw new Error(errorData.message || "Failed to create payment");
+          throw new Error(errorData.error || "Failed to create payment");
         }
 
         const paymentData = await paymentResponse.json();
-        console.log("Payment created:", paymentData);
+        console.log("Payment created, redirecting to:", paymentData.paymentUrl);
+        
+        if (!paymentData.paymentUrl) {
+          throw new Error("No payment URL received");
+        }
+        
+        // Use router.push for client-side navigation when staying within the app
+        // Use window.location.href for external URLs (like payment provider)
         window.location.href = paymentData.paymentUrl;
         return;
       }

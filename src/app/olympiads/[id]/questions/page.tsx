@@ -45,24 +45,34 @@ export default function AddQuestionsPage({
 }) {
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([
-    { question: "", type: "text", correctAnswer: "" },
-  ]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchOlympiad = async () => {
       try {
-        const response = await fetch(`/api/olympiads/${params.id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setOlympiad(data);
-          if (data.questions && data.questions.length > 0) {
-            setQuestions(data.questions);
-          }
-        } else {
+        // Fetch both olympiad and questions data in parallel
+        const [olympiadResponse, questionsResponse] = await Promise.all([
+          fetch(`/api/olympiads/${params.id}`),
+          fetch(`/api/olympiads/${params.id}/questions`)
+        ]);
+
+        if (!olympiadResponse.ok) {
           throw new Error("Failed to fetch olympiad");
+        }
+
+        const olympiadData = await olympiadResponse.json();
+        setOlympiad(olympiadData[0]); // Fix: get first item from array
+
+        if (questionsResponse.ok) {
+          const questionsData = await questionsResponse.json();
+          if (questionsData && questionsData.length > 0) {
+            setQuestions(questionsData);
+          } else {
+            // If no questions exist, start with one empty question
+            setQuestions([{ question: "", type: "text", correctAnswer: "" }]);
+          }
         }
       } catch (error) {
         console.error("Error fetching olympiad:", error);
@@ -240,6 +250,7 @@ export default function AddQuestionsPage({
   };
 
   const saveQuestions = async (publish: boolean = false) => {
+    setIsSaving(true);
     // Validate all questions based on their type
     const invalidQuestions = questions.some((q) => {
       if (!q.question) return true; // Question text is always required
@@ -259,24 +270,15 @@ export default function AddQuestionsPage({
         case "matching":
           if (!q.matchingPairs || q.matchingPairs.length < 2) return true;
           return q.matchingPairs.some((pair) => !pair.left || !pair.right);
-
-        default:
-          return true;
       }
     });
 
     if (invalidQuestions) {
-      alert(
-        "Пожалуйста, убедитесь что все вопросы заполнены корректно:\n" +
-          "- Текст вопроса обязателен\n" +
-          "- Для текстовых вопросов: укажите правильный ответ\n" +
-          "- Для вопросов с выбором: заполните все варианты ответов и укажите правильный\n" +
-          "- Для вопросов на сопоставление: заполните как минимум две пары"
-      );
+      setIsSaving(false);
+      alert("Пожалуйста, заполните все поля вопросов корректно");
       return;
     }
 
-    setIsSaving(true);
     try {
       const response = await fetch(`/api/olympiads/${params.id}/questions`, {
         method: "PUT",
@@ -285,18 +287,18 @@ export default function AddQuestionsPage({
         },
         body: JSON.stringify({
           questions,
-          publish,
+          publish: false, // Never publish from questions page
         }),
       });
 
-      if (response.ok) {
-        if (publish) {
-          router.push(`/olympiads/${params.id}/prizes`);
-        } else {
-          alert("Черновик сохранен");
-        }
-      } else {
+      if (!response.ok) {
         throw new Error("Failed to save questions");
+      }
+
+      if (!publish) {
+        alert("Черновик сохранен");
+      } else {
+        router.push(`/olympiads/${params.id}/prizes`);
       }
     } catch (error) {
       console.error("Error saving questions:", error);
@@ -308,9 +310,9 @@ export default function AddQuestionsPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+    
         <ChineseLoader text="Загрузка..." />
-      </div>
+    
     );
   }
 
@@ -334,8 +336,8 @@ export default function AddQuestionsPage({
             <p className="mt-2 text-gray-600">Добавьте вопросы для олимпиады</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8">
-            <div className="space-y-8">
+          <form className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8">
+            <div className="space-y-6">
               {questions.map((question, index) => (
                 <div
                   key={index}
@@ -390,115 +392,111 @@ export default function AddQuestionsPage({
                     />
                   </div>
 
-                  {question.type === "multiple_choice" && question.choices && (
+                  {/* Multiple Choice Question */}
+                  {question.type === "multiple_choice" && (
                     <div className="space-y-4">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Варианты ответов
-                      </label>
-                      {question.choices.map((choice, choiceIndex) => (
-                        <div key={choiceIndex} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={choice}
-                            onChange={(e) =>
-                              handleChoiceChange(
-                                index,
-                                choiceIndex,
-                                e.target.value
-                              )
-                            }
-                            className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-gray-900"
-                            placeholder={`Вариант ${choiceIndex + 1}`}
-                            required
-                          />
-                          {question.choices.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => removeChoice(index, choiceIndex)}
-                              className="px-3 py-2 text-red-600 hover:text-red-800"
-                            >
-                              Удалить
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addChoice(index)}
-                        className="text-sm text-red-600 hover:text-red-800"
-                      >
-                        + Добавить вариант
-                      </button>
+                      <div className="space-y-2">
+                        {(question.choices || []).map((choice, choiceIndex) => (
+                          <div key={choiceIndex} className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={choice}
+                              onChange={(e) =>
+                                handleChoiceChange(index, choiceIndex, e.target.value)
+                              }
+                              className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                              placeholder={`Вариант ${choiceIndex + 1}`}
+                              required
+                            />
+                            {(question.choices || []).length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => removeChoice(index, choiceIndex)}
+                                className="p-2 text-red-600 hover:text-red-700"
+                              >
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  {question.type === "matching" && question.matchingPairs && (
+                  {/* Matching Question */}
+                  {question.type === "matching" && (
                     <div className="space-y-4">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Пары для сопоставления
-                      </label>
-                      {question.matchingPairs.map((pair, pairIndex) => (
-                        <div
-                          key={pairIndex}
-                          className="flex gap-4 items-center"
-                        >
-                          <div className="flex-1">
-                            <input
-                              type="text"
-                              value={pair.left}
-                              onChange={(e) =>
-                                handleMatchingPairChange(
-                                  index,
-                                  pairIndex,
-                                  "left",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-gray-900"
-                              placeholder="Левая часть"
-                              required
-                            />
+                      <div className="space-y-2">
+                        {(question.matchingPairs || []).map((pair, pairIndex) => (
+                          <div key={pairIndex} className="flex items-center gap-2">
+                            <div className="flex-1 grid grid-cols-2 gap-4">
+                              <input
+                                type="text"
+                                value={pair.left}
+                                onChange={(e) =>
+                                  handleMatchingPairChange(
+                                    index,
+                                    pairIndex,
+                                    "left",
+                                    e.target.value
+                                  )
+                                }
+                                className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                placeholder="Левая часть"
+                                required
+                              />
+                              <input
+                                type="text"
+                                value={pair.right}
+                                onChange={(e) =>
+                                  handleMatchingPairChange(
+                                    index,
+                                    pairIndex,
+                                    "right",
+                                    e.target.value
+                                  )
+                                }
+                                className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                placeholder="Правая часть"
+                                required
+                              />
+                            </div>
+                            {(question.matchingPairs || []).length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => removeMatchingPair(index, pairIndex)}
+                                className="p-2 text-red-600 hover:text-red-700"
+                              >
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
+                            )}
                           </div>
-                          <div className="flex-none">
-                            <span className="text-gray-500">↔</span>
-                          </div>
-                          <div className="flex-1">
-                            <input
-                              type="text"
-                              value={pair.right}
-                              onChange={(e) =>
-                                handleMatchingPairChange(
-                                  index,
-                                  pairIndex,
-                                  "right",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors text-gray-900"
-                              placeholder="Правая часть"
-                              required
-                            />
-                          </div>
-                          {question.matchingPairs.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removeMatchingPair(index, pairIndex)
-                              }
-                              className="px-3 py-2 text-red-600 hover:text-red-800"
-                            >
-                              Удалить
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addMatchingPair(index)}
-                        className="text-sm text-red-600 hover:text-red-800"
-                      >
-                        + Добавить пару
-                      </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -597,33 +595,36 @@ export default function AddQuestionsPage({
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={addQuestion}
-                className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors"
-              >
-                + Добавить вопрос
-              </button>
-
-              <div className="flex justify-end space-x-4 pt-6">
+              <div className="pt-4">
                 <button
                   type="button"
-                  onClick={() => router.back()}
-                  className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  onClick={addQuestion}
+                  className="text-sm text-red-600 hover:text-red-800"
                 >
-                  Назад
+                  + Добавить вопрос
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => saveQuestions(false)}
+                  className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Сохранение..." : "Сохранить изменения"}
                 </button>
                 <button
                   type="button"
                   onClick={() => saveQuestions(true)}
-                  disabled={isSaving}
                   className="px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-red-800 to-red-700 rounded-lg hover:from-red-700 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-lg transform transition hover:-translate-y-0.5"
+                  disabled={isSaving}
                 >
-                  {isSaving ? "Сохранение..." : "Дальше"}
+                  {isSaving ? "Сохранение..." : "Продолжить"}
                 </button>
               </div>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

@@ -40,29 +40,11 @@ export async function GET(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if olympiad is available
-    const now = new Date();
-    const startDate = new Date(olympiad[0].startDate);
-    const endDate = new Date(olympiad[0].endDate);
-
-    if (now < startDate) {
-      return NextResponse.json(
-        { message: "Olympiad has not started yet" },
-        { status: 400 }
-      );
-    }
-
-    if (now > endDate) {
-      return NextResponse.json(
-        { message: "Olympiad has ended" },
-        { status: 400 }
-      );
-    }
-
-    // Return olympiad details including price
-    return NextResponse.json({
+    // For editing, we want to return all fields
+    return NextResponse.json([{
       id: olympiad[0].id,
       title: olympiad[0].title,
+      description: olympiad[0].description,
       level: olympiad[0].level,
       startDate: olympiad[0].startDate,
       endDate: olympiad[0].endDate,
@@ -73,8 +55,9 @@ export async function GET(
       isDraft: olympiad[0].isDraft,
       hasQuestions: olympiad[0].hasQuestions,
       hasPrizes: olympiad[0].hasPrizes,
-      isCompleted: olympiad[0].isCompleted
-    });
+      isCompleted: olympiad[0].isCompleted,
+      creatorId: olympiad[0].creatorId
+    }]);
   } catch (error) {
     console.error("Error fetching olympiad:", error);
     return NextResponse.json(
@@ -113,17 +96,33 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, level, startDate, endDate, isDraft } = body;
+    const {
+      title,
+      description,
+      level,
+      startDate,
+      endDate,
+      isDraft,
+      duration,
+      randomizeQuestions,
+      questionsPerParticipant,
+      price,
+    } = body;
 
     // Update the olympiad
     const [updatedOlympiad] = await db
       .update(olympiads)
       .set({
         title,
+        description,
         level,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         isDraft,
+        duration,
+        randomizeQuestions,
+        questionsPerParticipant,
+        price,
         updatedAt: new Date(),
       })
       .where(eq(olympiads.id, params.id))

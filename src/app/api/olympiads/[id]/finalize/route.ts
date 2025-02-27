@@ -31,15 +31,6 @@ export async function POST(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Get the promo codes from the request body
-    const { promoCodes } = await req.json();
-    if (!promoCodes || !Array.isArray(promoCodes) || promoCodes.length !== 3) {
-      return NextResponse.json(
-        { message: "Необходимо указать три промокода для победителей" },
-        { status: 400 }
-      );
-    }
-
     // Get olympiad and verify ownership
     const olympiad = await db.query.olympiads.findFirst({
       where: eq(olympiads.id, params.id),
@@ -88,18 +79,7 @@ export async function POST(
       score: r.result.score
     })));
 
-    // Create prizes for the top 3 participants
-    await db.delete(prizes).where(eq(prizes.olympiadId, params.id)); // Remove any existing prizes
-    for (let i = 0; i < Math.min(3, promoCodes.length); i++) {
-      await db.insert(prizes).values({
-        olympiadId: params.id,
-        placement: i + 1,
-        promoCode: promoCodes[i],
-        description: `Приз за ${i + 1} место`,
-      });
-    }
-
-    // Get the newly created prizes
+    // Get all prizes for this olympiad first
     const olympiadPrizes = await db
       .select()
       .from(prizes)
@@ -180,7 +160,7 @@ export async function POST(
                 isWinner && prize
                   ? `<div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
                       <p style="color: #92400e; margin: 0;">🏆 Поздравляем с ${place}-м местом!</p>
-                      <p style="color: #92400e; margin: 10px 0;">🎁 Ваш приз: ${prize.description}</p>
+                      <p style="color: #92400e; margin: 10px 0;">🎁 Ваш приз: ${prize.description || `Приз за ${place} место`}</p>
                       <p style="color: #92400e; font-weight: bold; margin: 0;">🎫 Ваш промокод: ${prize.promoCode}</p>
                      </div>`
                   : ""

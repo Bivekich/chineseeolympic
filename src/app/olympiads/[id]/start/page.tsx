@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ChineseLoader from "@/components/ChineseLoader";
 
@@ -71,6 +71,41 @@ export default function StartOlympiadPage({
     index: number;
   } | null>(null);
 
+  // Define handleSubmit before it's used in useEffect, wrapped in useCallback
+  const handleSubmit = useCallback(async (skipConfirmation: boolean = false) => {
+    if (!skipConfirmation && !confirm("Вы уверены, что хотите завершить олимпиаду?")) {
+      return;
+    }
+
+    if (isSubmitting) return; // Prevent multiple submissions
+
+    setIsSubmitting(true);
+    try {
+      // Clear timer data from localStorage
+      localStorage.removeItem(`olympiad_timer_${params.id}`);
+      localStorage.removeItem(`olympiad_answers_${params.id}`);
+      
+      const response = await fetch(`/api/olympiads/${params.id}/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ answers }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit answers");
+      }
+
+      router.push(`/olympiads/${params.id}/results`);
+    } catch (error) {
+      console.error("Error submitting answers:", error);
+      alert("Ошибка при отправке ответов");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [params.id, answers, isSubmitting, router]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -87,17 +122,17 @@ export default function StartOlympiadPage({
         let questionsData = await questionsResponse.json();
 
         // Handle randomization and question limit
-        if (olympiadData.randomizeQuestions) {
+        if (olympiadData[0].randomizeQuestions) {
           questionsData = [...questionsData].sort(() => Math.random() - 0.5);
         }
 
         if (
-          olympiadData.questionsPerParticipant &&
-          olympiadData.questionsPerParticipant < questionsData.length
+          olympiadData[0].questionsPerParticipant &&
+          olympiadData[0].questionsPerParticipant < questionsData.length
         ) {
           questionsData = questionsData.slice(
             0,
-            olympiadData.questionsPerParticipant
+            olympiadData[0].questionsPerParticipant
           );
         }
 
@@ -115,9 +150,44 @@ export default function StartOlympiadPage({
         });
         setScrambledAnswers(initialScrambledAnswers);
 
-        setOlympiad(olympiadData);
+        setOlympiad(olympiadData[0]);
         setQuestions(questionsData);
-        setTimeLeft(olympiadData.duration);
+        
+        // Check if we have a saved timer state in localStorage
+        const timerKey = `olympiad_timer_${params.id}`;
+        const savedEndTime = localStorage.getItem(timerKey);
+        
+        if (savedEndTime) {
+          // Calculate remaining time based on saved end time
+          const endTime = parseInt(savedEndTime, 10);
+          const now = Math.floor(Date.now() / 1000);
+          const remaining = Math.max(0, endTime - now);
+          
+          if (remaining > 0) {
+            // If there's time remaining, use it
+            setTimeLeft(remaining);
+          } else {
+            // If time has expired, submit automatically
+            handleSubmit(true);
+            return;
+          }
+        } else {
+          // If no saved timer, initialize with full duration and save end time
+          setTimeLeft(olympiadData[0].duration);
+          const endTime = Math.floor(Date.now() / 1000) + olympiadData[0].duration;
+          localStorage.setItem(timerKey, endTime.toString());
+        }
+        
+        // Also try to load saved answers
+        const answersKey = `olympiad_answers_${params.id}`;
+        const savedAnswers = localStorage.getItem(answersKey);
+        if (savedAnswers) {
+          try {
+            setAnswers(JSON.parse(savedAnswers));
+          } catch (e) {
+            console.error("Error parsing saved answers:", e);
+          }
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -126,7 +196,7 @@ export default function StartOlympiadPage({
     };
 
     fetchData();
-  }, [params.id]);
+  }, [params.id, handleSubmit]);
 
   // Timer effect
   useEffect(() => {
@@ -139,11 +209,22 @@ export default function StartOlympiadPage({
     }
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
+      setTimeLeft((prev) => {
+        const newValue = prev - 1;
+        return newValue;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, olympiad]);
+  }, [timeLeft, olympiad, handleSubmit]);
+  
+  // Save answers to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(answers).length > 0) {
+      const answersKey = `olympiad_answers_${params.id}`;
+      localStorage.setItem(answersKey, JSON.stringify(answers));
+    }
+  }, [answers, params.id]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -191,36 +272,6 @@ export default function StartOlympiadPage({
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex((prev) => prev - 1);
-    }
-  };
-
-  const handleSubmit = async (skipConfirmation: boolean = false) => {
-    if (!skipConfirmation && !confirm("Вы уверены, что хотите завершить олимпиаду?")) {
-      return;
-    }
-
-    if (isSubmitting) return; // Prevent multiple submissions
-
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`/api/olympiads/${params.id}/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ answers }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to submit answers");
-      }
-
-      router.push(`/olympiads/${params.id}/results`);
-    } catch (error) {
-      console.error("Error submitting answers:", error);
-      alert("Ошибка при отправке ответов");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -299,7 +350,7 @@ export default function StartOlympiadPage({
       }));
 
       // Convert to the format expected by the backend
-      const matchingPairs = currentQuestion.matchingPairs || [];
+      const matchingPairs = questions[currentQuestionIndex].matchingPairs || [];
       const matchingAnswersObj = newMatches.reduce(
         (acc, match) => ({
           ...acc,

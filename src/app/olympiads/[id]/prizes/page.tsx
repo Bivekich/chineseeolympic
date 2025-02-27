@@ -44,7 +44,7 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
 
         if (olympiadResponse.ok) {
           const olympiadData = await olympiadResponse.json();
-          setOlympiad(olympiadData);
+          setOlympiad(olympiadData[0]);
 
           if (prizesResponse.ok) {
             const prizesData = await prizesResponse.json();
@@ -127,7 +127,7 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
           throw new Error("Failed to verify olympiad state");
         }
         const olympiadState = await verifyResponse.json();
-        if (!olympiadState.hasPrizes || olympiadState.isDraft) {
+        if (!olympiadState[0].hasPrizes || olympiadState[0].isDraft) {
           throw new Error("Failed to update olympiad state");
         }
         router.push("/dashboard");

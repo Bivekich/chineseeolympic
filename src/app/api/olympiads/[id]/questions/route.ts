@@ -159,23 +159,13 @@ export async function PUT(
         }))
       );
 
-      // Update olympiad status if publishing
-      if (publish) {
-        await tx
-          .update(olympiads)
-          .set({
-            isDraft: false,
-            hasQuestions: true,
-          })
-          .where(eq(olympiads.id, params.id));
-      } else {
-        await tx
-          .update(olympiads)
-          .set({
-            hasQuestions: true,
-          })
-          .where(eq(olympiads.id, params.id));
-      }
+      // Only update hasQuestions, never change draft status here
+      await tx
+        .update(olympiads)
+        .set({
+          hasQuestions: true,
+        })
+        .where(eq(olympiads.id, params.id));
     });
 
     return NextResponse.json({ message: "Questions updated successfully" });

@@ -223,14 +223,6 @@ export default function DashboardPage() {
                             >
                               Редактировать
                             </button>
-                            {!olympiad.hasQuestions && (
-                              <button
-                                onClick={() => router.push(`/olympiads/${olympiad.id}/questions`)}
-                                className="px-3 py-1 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors"
-                              >
-                                Добавить вопросы
-                              </button>
-                            )}
                             {olympiad.hasQuestions && !olympiad.hasPrizes && (
                               <button
                                 onClick={() => router.push(`/olympiads/${olympiad.id}/prizes`)}
