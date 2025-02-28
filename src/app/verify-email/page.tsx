@@ -1,54 +1,54 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import ChineseLoader from "@/components/ChineseLoader";
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import ChineseLoader from '@/components/ChineseLoader';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get("token");
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
+  const token = searchParams.get('token');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
+    'loading'
   );
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!token) {
-      setStatus("error");
-      setMessage("Недействительная ссылка подтверждения.");
+      setStatus('error');
+      setMessage('Недействительная ссылка подтверждения.');
       return;
     }
 
     async function verifyEmail() {
       try {
-        const response = await fetch("/api/auth/verify-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        const response = await fetch('/api/auth/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token }),
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Что-то пошло не так");
+          throw new Error(data.error || 'Что-то пошло не так');
         }
 
-        setStatus("success");
-        setMessage(data.message || "Email успешно подтвержден!");
+        setStatus('success');
+        setMessage(data.message || 'Email успешно подтвержден!');
 
         // Redirect to login page after 3 seconds
         setTimeout(() => {
-          router.push("/login");
+          router.push('/login');
         }, 3000);
       } catch (err) {
-        setStatus("error");
+        setStatus('error');
         setMessage(
           err instanceof Error
             ? err.message
-            : "Не удалось подтвердить email адрес."
+            : 'Не удалось подтвердить email адрес.'
         );
       }
     }
@@ -78,11 +78,11 @@ export default function VerifyEmailPage() {
           </motion.h2>
 
           <div className="bg-white/5 backdrop-blur-sm p-8 rounded-lg shadow-xl border border-white/10">
-            {status === "loading" && (
+            {status === 'loading' && (
               <ChineseLoader text="Подтверждаем ваш email..." />
             )}
 
-            {status === "success" && (
+            {status === 'success' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -113,7 +113,7 @@ export default function VerifyEmailPage() {
               </motion.div>
             )}
 
-            {status === "error" && (
+            {status === 'error' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -150,5 +150,13 @@ export default function VerifyEmailPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmail() {
+  return (
+    <Suspense fallback={<div>Загрузка...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
