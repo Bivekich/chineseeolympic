@@ -87,29 +87,41 @@ export async function POST(
         to: participant.email,
         subject: `Поздравляем с ${result.place} местом в олимпиаде "${olympiad.title}"!`,
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #7f1d1d, #991b1b); border-radius: 16px; padding: 40px 20px; text-align: center; color: white; margin-bottom: 20px;">
-              <h1 style="margin: 0; font-size: 36px; margin-bottom: 10px;">汉语之星</h1>
-              <p style="margin: 0; font-size: 20px;">Олимпиада по китайскому языку</p>
-            </div>
-            
-            <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <h2 style="color: #1f2937; margin-top: 0;">Поздравляем!</h2>
-              <p style="color: #4b5563;">Уважаемый(ая) ${participant.fullName}!</p>
-              <p style="color: #4b5563;">Вы заняли ${result.place} место в олимпиаде "${olympiad.title}" с результатом ${result.score}%.</p>
-              
-              <div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
-                <p style="color: #92400e; margin: 0;">🏆 Ваш приз: ${prize.description || `Приз за ${result.place} место`}</p>
-                <p style="color: #92400e; font-weight: bold; margin: 10px 0 0 0;">🎫 Ваш промокод: ${promoCode}</p>
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Поздравляем с победой!</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #7f1d1d, #991b1b); border-radius: 16px; padding: 40px 20px; text-align: center; color: white; margin-bottom: 20px;">
+                  <h1 style="margin: 0; font-size: 36px; margin-bottom: 10px;">汉语之星</h1>
+                  <p style="margin: 0; font-size: 20px;">Олимпиада по китайскому языку</p>
+                </div>
+                
+                <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <h2 style="color: #1f2937; margin-top: 0;">Поздравляем!</h2>
+                  <p style="color: #4b5563;">Уважаемый(ая) ${participant.fullName}!</p>
+                  <p style="color: #4b5563;">Вы заняли ${result.place} место в олимпиаде "${olympiad.title}" с результатом ${result.score}%.</p>
+                  
+                  <div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
+                    <p style="color: #92400e; margin: 0;">🏆 Ваш приз: ${prize.description || `Приз за ${result.place} место`}</p>
+                    <p style="color: #92400e; font-weight: bold; margin: 10px 0 0 0;">🎫 Ваш промокод: ${promoCode}</p>
+                  </div>
+                  
+                  <p style="color: #4b5563; margin-top: 20px;">
+                    Благодарим вас за участие в олимпиаде! Желаем дальнейших успехов в изучении китайского языка.
+                  </p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px;">
+                  <p>Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
+                </div>
               </div>
-              
-             
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px;">
-              <p>Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
-            </div>
-          </div>
+            </body>
+          </html>
         `,
       });
     } catch (error) {

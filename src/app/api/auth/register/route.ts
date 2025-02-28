@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       console.error("Error message:", emailError.message);
       console.error("Error stack:", emailError.stack);
       if (emailError.response) {
-        console.error("Resend API response:", emailError.response);
+        console.error("SMTP error response:", emailError.response);
       }
 
       // Delete the user if email sending fails

@@ -144,40 +144,56 @@ export async function POST(
           : `Спасибо за участие в олимпиаде "${olympiad.title}"`;
 
         const emailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #7f1d1d, #991b1b); border-radius: 16px; padding: 40px 20px; text-align: center; color: white; margin-bottom: 20px;">
-              <h1 style="margin: 0; font-size: 36px; margin-bottom: 10px;">汉语之星</h1>
-              <p style="margin: 0; font-size: 20px;">Олимпиада по китайскому языку</p>
-            </div>
-            
-            <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <h2 style="color: #1f2937; margin-top: 0;">${isWinner ? "Поздравляем!" : "Спасибо за участие!"}</h2>
-              <p style="color: #4b5563;">Уважаемый(ая) ${details.fullName}!</p>
-              <p style="color: #4b5563;">Олимпиада: ${olympiad.title}</p>
-              <p style="color: #4b5563;">Ваш результат: ${result.score}%</p>
-              <p style="color: #4b5563;">Место: ${place} из ${results.length}</p>
-              ${
-                isWinner && prize
-                  ? `<div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
-                      <p style="color: #92400e; margin: 0;">🏆 Поздравляем с ${place}-м местом!</p>
-                      <p style="color: #92400e; margin: 10px 0;">🎁 Ваш приз: ${prize.description || `Приз за ${place} место`}</p>
-                      <p style="color: #92400e; font-weight: bold; margin: 0;">🎫 Ваш промокод: ${prize.promoCode}</p>
-                     </div>`
-                  : ""
-              }
-              <p style="color: #4b5563; margin-top: 20px;">
-                Ваш сертификат доступен по ссылке: 
-                <a href="${certificateUrl}" 
-                   style="color: #991b1b; text-decoration: none; padding: 8px 16px; background-color: #fee2e2; border-radius: 4px; display: inline-block; margin-top: 8px;">
-                  Скачать сертификат
-                </a>
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px;">
-              <p>Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
-            </div>
-          </div>
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${isWinner ? "Поздравляем с победой!" : "Результаты олимпиады"}</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #7f1d1d, #991b1b); border-radius: 16px; padding: 40px 20px; text-align: center; color: white; margin-bottom: 20px;">
+                  <h1 style="margin: 0; font-size: 36px; margin-bottom: 10px;">汉语之星</h1>
+                  <p style="margin: 0; font-size: 20px;">Олимпиада по китайскому языку</p>
+                </div>
+                
+                <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <h2 style="color: #1f2937; margin-top: 0;">${isWinner ? "Поздравляем!" : "Спасибо за участие!"}</h2>
+                  <p style="color: #4b5563;">Уважаемый(ая) ${details.fullName}!</p>
+                  <p style="color: #4b5563;">Олимпиада: ${olympiad.title}</p>
+                  <p style="color: #4b5563;">Ваш результат: ${result.score}%</p>
+                  <p style="color: #4b5563;">Место: ${place} из ${results.length}</p>
+                  ${
+                    isWinner && prize
+                      ? `<div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
+                          <p style="color: #92400e; margin: 0;">🏆 Поздравляем с ${place}-м местом!</p>
+                          <p style="color: #92400e; margin: 10px 0;">🎁 Ваш приз: ${prize.description || `Приз за ${place} место`}</p>
+                          ${prize.promoCode ? `<p style="color: #92400e; font-weight: bold; margin: 0;">🎫 Ваш промокод: ${prize.promoCode}</p>` : ''}
+                         </div>`
+                      : ""
+                  }
+                  <div style="margin-top: 20px; text-align: center;">
+                    <p style="color: #4b5563; margin-bottom: 15px;">
+                      Ваш сертификат участника доступен по ссылке:
+                    </p>
+                    <a href="${certificateUrl}" 
+                       style="display: inline-block; background-color: #991b1b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+                      Скачать сертификат
+                    </a>
+                  </div>
+                  
+                  <p style="color: #4b5563; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    Благодарим вас за участие в олимпиаде! Желаем дальнейших успехов в изучении китайского языка.
+                  </p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px;">
+                  <p>Это автоматическое сообщение, пожалуйста, не отвечайте на него.</p>
+                </div>
+              </div>
+            </body>
+          </html>
         `;
 
         // Send email
