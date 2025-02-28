@@ -23,6 +23,13 @@ const nextConfig = {
         },
       ],
     });
+
+    // Добавляем поддержку нативных модулей
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'iconv-lite$': 'iconv-lite/lib/index.js',
+    };
+
     return config;
   },
   // Отключаем проверки TypeScript и ESLint во время сборки
