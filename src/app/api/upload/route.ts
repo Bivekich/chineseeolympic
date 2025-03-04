@@ -6,17 +6,10 @@ import formidable from 'formidable';
 import { existsSync } from 'fs';
 import { IncomingMessage } from 'http';
 
-// New route configuration
+// Route segment config
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
-
-// Disable default body parser
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const revalidate = 0;
 
 // Helper function to parse form data
 const parseForm = async (

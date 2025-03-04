@@ -1,20 +1,23 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { olympiads, prizes } from "@/lib/db/schema";
-import { eq, and, lte, gte } from "drizzle-orm";
-import { verifyAuth } from "@/lib/auth";
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { olympiads, prizes } from '@/lib/db/schema';
+import { eq, and, lte, gte } from 'drizzle-orm';
+import { verifyAuth } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   try {
     const userId = await verifyAuth();
     if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log("Fetching available olympiads for user:", userId); // Debug log
+    console.log('Fetching available olympiads for user:', userId); // Debug log
 
     const currentDate = new Date();
-    console.log("Current date:", currentDate); // Debug log
+    console.log('Current date:', currentDate); // Debug log
 
     // Get all non-draft olympiads that are currently ongoing
     const availableOlympiads = await db
@@ -40,7 +43,7 @@ export async function GET() {
         )
       );
 
-    console.log("Found olympiads:", availableOlympiads); // Debug log
+    console.log('Found olympiads:', availableOlympiads); // Debug log
 
     // Get prizes for each olympiad
     const olympiadsWithPrizes = await Promise.all(
@@ -58,17 +61,23 @@ export async function GET() {
           // Format prizes information
           const prizesText = olympiadPrizes
             .map((prize) => {
-              const place = prize.placement === 1 ? "1-е место" :
-                          prize.placement === 2 ? "2-е место" :
-                          prize.placement === 3 ? "3-е место" :
-                          `${prize.placement}-е место`;
-              return `${place}${prize.description ? `: ${prize.description}` : ''}`;
+              const place =
+                prize.placement === 1
+                  ? '1-е место'
+                  : prize.placement === 2
+                  ? '2-е место'
+                  : prize.placement === 3
+                  ? '3-е место'
+                  : `${prize.placement}-е место`;
+              return `${place}${
+                prize.description ? `: ${prize.description}` : ''
+              }`;
             })
             .join('\n');
 
           return {
             ...olympiad,
-            prizes: prizesText || null
+            prizes: prizesText || null,
           };
         }
         return olympiad;
@@ -78,10 +87,10 @@ export async function GET() {
     return NextResponse.json(olympiadsWithPrizes);
   } catch (error) {
     // Log the full error for debugging
-    console.error("[OLYMPIADS_AVAILABLE] Detailed error:", error);
+    console.error('[OLYMPIADS_AVAILABLE] Detailed error:', error);
     return NextResponse.json(
       {
-        message: "Internal Server Error",
+        message: 'Internal Server Error',
         details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
