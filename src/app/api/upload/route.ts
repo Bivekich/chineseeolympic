@@ -11,6 +11,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+// Disable default body parser
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 // Helper function to parse form data
 const parseForm = async (
   req: Request & IncomingMessage

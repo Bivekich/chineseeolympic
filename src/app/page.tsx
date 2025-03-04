@@ -1,10 +1,10 @@
-import Hero from "@/components/sections/Hero";
-import HowItWorks from "@/components/sections/HowItWorks";
-import Benefits from "@/components/sections/Benefits";
-import Prizes from "@/components/sections/Prizes";
-import Stages from "@/components/sections/Stages";
-import Contact from "@/components/sections/Contact";
-import { dfn } from "framer-motion/client";
+import Hero from '@/components/sections/Hero';
+import HowItWorks from '@/components/sections/HowItWorks';
+import Benefits from '@/components/sections/Benefits';
+import Prizes from '@/components/sections/Prizes';
+import SeasonalOlympiads from '@/components/SeasonalOlympiads';
+import Contact from '@/components/sections/Contact';
+import { dfn } from 'framer-motion/client';
 
 export default function Home() {
   return (
@@ -13,7 +13,7 @@ export default function Home() {
       <Benefits />
       <HowItWorks />
       <Prizes />
-      <Stages />
+      <SeasonalOlympiads />
       <Contact />
     </main>
   );

@@ -1,11 +1,10 @@
 'use client';
 
-import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthForm from '@/components/auth/AuthForm';
 
-function ResetPasswordContent() {
+export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -45,19 +44,5 @@ function ResetPasswordContent() {
         <AuthForm type="reset-password" token={token} />
       </div>
     </div>
-  );
-}
-
-export default function ResetPassword() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-white text-xl">Загрузка...</div>
-        </div>
-      }
-    >
-      <ResetPasswordContent />
-    </Suspense>
   );
 }

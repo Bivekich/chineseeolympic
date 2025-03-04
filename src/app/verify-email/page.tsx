@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import ChineseLoader from '@/components/ChineseLoader';
 
-function VerifyEmailContent() {
+export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
@@ -150,13 +150,5 @@ function VerifyEmailContent() {
         </motion.div>
       </div>
     </div>
-  );
-}
-
-export default function VerifyEmail() {
-  return (
-    <Suspense fallback={<div>Загрузка...</div>}>
-      <VerifyEmailContent />
-    </Suspense>
   );
 }

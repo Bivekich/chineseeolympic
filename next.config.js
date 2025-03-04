@@ -23,13 +23,6 @@ const nextConfig = {
         },
       ],
     });
-
-    // Добавляем поддержку нативных модулей
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'iconv-lite$': 'iconv-lite/lib/index.js',
-    };
-
     return config;
   },
   // Отключаем проверки TypeScript и ESLint во время сборки
@@ -39,13 +32,6 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Конфигурация для динамических роутов
-  experimental: {
-    missingSuspenseWithCSRBailout: false,
-  },
-  // Отключаем статическую оптимизацию для роутов с cookies
-  staticPageGenerationTimeout: 1000,
-  output: 'standalone',
 };
 
 module.exports = nextConfig;

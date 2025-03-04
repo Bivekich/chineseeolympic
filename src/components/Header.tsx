@@ -12,7 +12,7 @@ export default function Header() {
     { title: 'Преимущества', href: '#benefits' },
     { title: 'Как участвовать', href: '#how-it-works' },
     { title: 'Призы', href: '#prizes' },
-    { title: 'Этапы', href: '#stages' },
+    { title: 'Сезоны', href: '#stages' },
     { title: 'Контакты', href: '#contact' },
   ];
 
