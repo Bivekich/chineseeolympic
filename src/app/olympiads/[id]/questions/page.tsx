@@ -395,7 +395,7 @@ export default function AddQuestionsPage({
                   {/* Multiple Choice Question */}
                   {question.type === "multiple_choice" && (
                     <div className="space-y-4">
-                      <div className="space-y-2">
+                      <div className="space-y-2 text-gray-900">
                         {(question.choices || []).map((choice, choiceIndex) => (
                           <div key={choiceIndex} className="flex items-center gap-2">
                             <input
@@ -432,6 +432,13 @@ export default function AddQuestionsPage({
                           </div>
                         ))}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => addChoice(index)}
+                        className="text-sm text-red-600 hover:text-red-800"
+                      >
+                        + Добавить вариант ответа
+                      </button>
                     </div>
                   )}
 
@@ -441,7 +448,7 @@ export default function AddQuestionsPage({
                       <div className="space-y-2">
                         {(question.matchingPairs || []).map((pair, pairIndex) => (
                           <div key={pairIndex} className="flex items-center gap-2">
-                            <div className="flex-1 grid grid-cols-2 gap-4">
+                            <div className="flex-1 grid grid-cols-2 gap-4 text-gray-900">
                               <input
                                 type="text"
                                 value={pair.left}
@@ -497,6 +504,13 @@ export default function AddQuestionsPage({
                           </div>
                         ))}
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => addMatchingPair(index)}
+                        className="text-sm text-red-600 hover:text-red-800"
+                      >
+                        + Добавить пару
+                      </button>
                     </div>
                   )}
 

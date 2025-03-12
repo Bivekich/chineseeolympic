@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { participantResults, questions } from "@/lib/db/schema";
+import { participantResults, questions, olympiads } from "@/lib/db/schema";
 import { verifyAuth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 
@@ -16,11 +16,32 @@ export async function POST(
 
     const { answers } = await request.json();
 
+    // Get the olympiad first to check questionsPerParticipant
+    const olympiad = await db
+      .select()
+      .from(olympiads)
+      .where(eq(olympiads.id, params.id))
+      .then(res => res[0]);
+
+    if (!olympiad) {
+      return NextResponse.json(
+        { message: "Olympiad not found" },
+        { status: 404 }
+      );
+    }
+
     // Get all questions for this olympiad
-    const olympiadQuestions = await db
+    let olympiadQuestions = await db
       .select()
       .from(questions)
       .where(eq(questions.olympiadId, params.id));
+
+    // If olympiad has questionsPerParticipant set, we need to determine which questions
+    // this user actually received. We can do this by looking at their answers.
+    if (olympiad.questionsPerParticipant && olympiad.questionsPerParticipant < olympiadQuestions.length) {
+      // Filter questions to only those that were answered
+      olympiadQuestions = olympiadQuestions.filter(q => answers.hasOwnProperty(q.id));
+    }
 
     if (!olympiadQuestions.length) {
       return NextResponse.json(

@@ -70,6 +70,8 @@ export default function StartOlympiadPage({
     side: "left" | "right";
     index: number;
   } | null>(null);
+  const [scrambledChoices, setScrambledChoices] = useState<{ [key: string]: string[] }>({});
+  const [scrambledPairs, setScrambledPairs] = useState<{ [key: string]: number[] }>({});
 
   // Define handleSubmit before it's used in useEffect, wrapped in useCallback
   const handleSubmit = useCallback(async (skipConfirmation: boolean = false) => {
@@ -136,19 +138,44 @@ export default function StartOlympiadPage({
           );
         }
 
-        // Initialize scrambled answers for matching questions
-        const initialScrambledAnswers: { [key: string]: DragItem[] } = {};
-        questionsData.forEach((q: Question) => {
-          if (q.type === "matching" && q.matchingPairs) {
-            initialScrambledAnswers[q.id] = q.matchingPairs
-              .map((pair) => ({
-                id: `${q.id}-${pair.right}`,
-                content: pair.right,
-              }))
-              .sort(() => Math.random() - 0.5);
-          }
-        });
-        setScrambledAnswers(initialScrambledAnswers);
+        // Try to load existing scrambled orders from localStorage
+        const scrambledKey = `olympiad_scrambled_${params.id}`;
+        const savedScrambled = localStorage.getItem(scrambledKey);
+        let scrambledData = savedScrambled ? JSON.parse(savedScrambled) : null;
+
+        if (!scrambledData) {
+          // Initialize new scrambled orders if none exist
+          const initialScrambledChoices: { [key: string]: string[] } = {};
+          const initialScrambledPairs: { [key: string]: number[] } = {};
+
+          questionsData.forEach((q: Question) => {
+            if (q.type === "multiple_choice" && q.choices) {
+              // Create array of indices and shuffle them
+              const indices = Array.from({ length: q.choices.length }, (_, i) => i);
+              initialScrambledChoices[q.id] = indices
+                .sort(() => Math.random() - 0.5)
+                .map(i => q.choices![i]);
+            }
+            if (q.type === "matching" && q.matchingPairs) {
+              // Create array of indices and shuffle them
+              const indices = Array.from({ length: q.matchingPairs.length }, (_, i) => i);
+              initialScrambledPairs[q.id] = indices.sort(() => Math.random() - 0.5);
+            }
+          });
+
+          // Save to localStorage
+          localStorage.setItem(scrambledKey, JSON.stringify({
+            choices: initialScrambledChoices,
+            pairs: initialScrambledPairs
+          }));
+
+          setScrambledChoices(initialScrambledChoices);
+          setScrambledPairs(initialScrambledPairs);
+        } else {
+          // Use existing scrambled orders
+          setScrambledChoices(scrambledData.choices);
+          setScrambledPairs(scrambledData.pairs);
+        }
 
         setOlympiad(olympiadData[0]);
         setQuestions(questionsData);
@@ -488,7 +515,7 @@ export default function StartOlympiadPage({
                 {currentQuestion.type === "multiple_choice" &&
                 currentQuestion.choices ? (
                   <div className="space-y-3">
-                    {currentQuestion.choices.map((choice, index) => (
+                    {(scrambledChoices[currentQuestion.id] || currentQuestion.choices).map((choice, index) => (
                       <label
                         key={index}
                         className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors"
@@ -550,40 +577,47 @@ export default function StartOlympiadPage({
                         ))}
                       </div>
 
-                      {/* Right column */}
+                      {/* Right column - now using scrambled order */}
                       <div className="space-y-4">
-                        {currentQuestion.matchingPairs.map((pair, index) => (
-                          <div
-                            key={`right-${index}`}
-                            onClick={() =>
-                              handleMatchingClick(
+                        {currentQuestion.matchingPairs && scrambledPairs[currentQuestion.id]?.map((scrambledIndex) => {
+                          const pair = currentQuestion.matchingPairs![scrambledIndex];
+                          return (
+                            <div
+                              key={`right-${scrambledIndex}`}
+                              onClick={() =>
+                                handleMatchingClick(
+                                  currentQuestion.id,
+                                  "right",
+                                  scrambledIndex
+                                )
+                              }
+                              className={`p-4 rounded-lg transition-all cursor-pointer relative ${
+                                isItemSelected(
+                                  currentQuestion.id,
+                                  "right",
+                                  scrambledIndex
+                                )
+                                  ? "bg-red-700/50 border-2 border-red-200"
+                                  : isItemMatched(
+                                      currentQuestion.id,
+                                      "right",
+                                      scrambledIndex
+                                    )
+                                  ? "bg-white/20 border-2 border-green-400/50"
+                                  : "bg-white/10 hover:bg-white/20"
+                              }`}
+                            >
+                              <span className="text-white">{pair.right}</span>
+                              {isItemMatched(
                                 currentQuestion.id,
                                 "right",
-                                index
-                              )
-                            }
-                            className={`p-4 rounded-lg transition-all cursor-pointer relative ${
-                              isItemSelected(currentQuestion.id, "right", index)
-                                ? "bg-red-700/50 border-2 border-red-200"
-                                : isItemMatched(
-                                    currentQuestion.id,
-                                    "right",
-                                    index
-                                  )
-                                ? "bg-white/20 border-2 border-green-400/50"
-                                : "bg-white/10 hover:bg-white/20"
-                            }`}
-                          >
-                            <span className="text-white">{pair.right}</span>
-                            {isItemMatched(
-                              currentQuestion.id,
-                              "right",
-                              index
-                            ) && (
-                              <div className="absolute left-0 top-0 h-full w-2 bg-green-400/50 rounded-l-lg" />
-                            )}
-                          </div>
-                        ))}
+                                scrambledIndex
+                              ) && (
+                                <div className="absolute left-0 top-0 h-full w-2 bg-green-400/50 rounded-l-lg" />
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
