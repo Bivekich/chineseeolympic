@@ -12,12 +12,11 @@ interface Participant {
   city: string;
   age: number;
   educationType: string;
-  grade: string | null;
-  institutionName: string | null;
+  grade?: string;
+  institutionName?: string;
   phoneNumber: string;
-  score: string | null;
-  completedAt: string | null;
-  place: string | null;
+  score?: string;
+  place?: string;
 }
 
 interface Olympiad {
@@ -28,6 +27,31 @@ interface Olympiad {
   endDate: string;
   isCompleted: boolean;
   hasPrizes: boolean;
+  description: string | null;
+  duration: number;
+  randomizeQuestions: boolean;
+  questionsPerParticipant: number | null;
+  price: number;
+  hasQuestions: boolean;
+}
+
+interface Question {
+  id: string;
+  question: string;
+  type: "text" | "multiple_choice" | "matching";
+  choices?: string[];
+  matchingPairs?: { left: string; right: string }[];
+  correctAnswer: string;
+  media?: {
+    type: "image" | "video" | "audio";
+    url: string;
+  };
+}
+
+interface Prize {
+  id: string;
+  placement: number;
+  promoCode: string | null;
 }
 
 interface PromoCodeModalProps {
@@ -108,33 +132,48 @@ export default function ManageOlympiadPage({
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [prizes, setPrizes] = useState<Prize[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEndingOlympiad, setIsEndingOlympiad] = useState(false);
-  const [sendingPrizeForId, setSendingPrizeForId] = useState<string | null>(null);
-  const [isPromoCodeModalOpen, setIsPromoCodeModalOpen] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [isPromoCodeModalOpen, setIsPromoCodeModalOpen] = useState(false);
+  const [sendingPrizeForId, setSendingPrizeForId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'participants' | 'settings'>('participants');
 
   useEffect(() => {
-    console.log("Fetching data for olympiad:", params.id);
-    
     const fetchData = async () => {
       try {
-        const response = await fetch(`/api/olympiads/${params.id}/participants`);
+        const [olympiadResponse, participantsResponse, questionsResponse, prizesResponse] = await Promise.all([
+          fetch(`/api/olympiads/${params.id}`),
+          fetch(`/api/olympiads/${params.id}/participants`),
+          fetch(`/api/olympiads/${params.id}/questions`),
+          fetch(`/api/olympiads/${params.id}/prizes`),
+        ]);
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch data");
+        if (!olympiadResponse.ok) {
+          throw new Error("Failed to fetch olympiad");
         }
 
-        const data = await response.json();
-        console.log("Received data:", data);
-        console.log("Number of participants:", data.participants.length);
-        console.log("Participant IDs:", data.participants.map((p: Participant) => p.id));
-        
-        setOlympiad(data.olympiad);
-        setParticipants(data.participants);
+        const olympiadData = await olympiadResponse.json();
+        setOlympiad(olympiadData[0]);
+
+        if (participantsResponse.ok) {
+          const participantsData = await participantsResponse.json();
+          setParticipants(participantsData.participants);
+        }
+
+        if (questionsResponse.ok) {
+          const questionsData = await questionsResponse.json();
+          setQuestions(questionsData);
+        }
+
+        if (prizesResponse.ok) {
+          const prizesData = await prizesResponse.json();
+          setPrizes(prizesData);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
-        alert("Ошибка при загрузке данных");
       } finally {
         setIsLoading(false);
       }
@@ -245,12 +284,37 @@ export default function ManageOlympiadPage({
             </div>
           </div>
 
-          {/* Participants List */}
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-red-200/10 p-6 mb-6">
-            <h2 className="text-xl font-semibold text-white mb-4">
-              Участники ({participants.length})
-            </h2>
+          {/* Tabs */}
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={() => setActiveTab('participants')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                activeTab === 'participants'
+                  ? 'bg-red-700 text-white'
+                  : 'bg-white/5 text-red-200 hover:bg-white/10'
+              }`}
+            >
+              Участники
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                activeTab === 'settings'
+                  ? 'bg-red-700 text-white'
+                  : 'bg-white/5 text-red-200 hover:bg-white/10'
+              }`}
+            >
+              Настройки
+            </button>
+          </div>
+
+          {/* Content */}
+          {activeTab === 'participants' ? (
             <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-white mb-4">
+                Участники ({participants.length})
+              </h2>
+              {/* Existing participants list */}
               {participants.map((participant) => (
                 <div
                   key={participant.id}
@@ -276,37 +340,27 @@ export default function ManageOlympiadPage({
                         <p>Телефон: {participant.phoneNumber}</p>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      {participant.score ? (
-                        <>
-                          <span className="text-lg font-semibold text-white">
-                            {participant.score}%
-                          </span>
-                          {participant.place && (
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-green-400">
-                                {participant.place} место
-                              </p>
-                              {olympiad.isCompleted && 
-                               olympiad.hasPrizes && 
-                               parseInt(participant.place) <= 3 && (
-                                <button
-                                  onClick={() => handleSendPrize(participant)}
-                                  disabled={sendingPrizeForId === participant.id}
-                                  className="px-3 py-1 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-500 transition-colors disabled:opacity-50"
-                                >
-                                  {sendingPrizeForId === participant.id ? 
-                                    "Отправка..." : 
-                                    "Отправить приз"}
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-sm text-red-200/80">
-                          Не завершено
-                        </span>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-right">
+                        <div className="text-lg font-medium text-white">
+                          {participant.score ? `${participant.score}%` : "Не завершено"}
+                        </div>
+                        {participant.place && (
+                          <div className="text-sm text-red-200">
+                            {participant.place} место
+                          </div>
+                        )}
+                      </div>
+                      {olympiad.hasPrizes && participant.place && parseInt(participant.place) <= 3 && (
+                        <button
+                          onClick={() => handleSendPrize(participant)}
+                          disabled={sendingPrizeForId === participant.id}
+                          className="px-3 py-1 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                        >
+                          {sendingPrizeForId === participant.id
+                            ? "Отправка..."
+                            : "Отправить приз"}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -318,10 +372,123 @@ export default function ManageOlympiadPage({
                 </p>
               )}
             </div>
-          </div>
+          ) : (
+            <div className="space-y-6">
+              {/* General Settings */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-red-200/10 p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Общие настройки</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Описание</h4>
+                    <p className="text-white">{olympiad.description || "Нет описания"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Длительность</h4>
+                    <p className="text-white">{Math.floor(olympiad.duration || 0) / 60} минут</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Случайный порядок вопросов</h4>
+                    <p className="text-white">{olympiad.randomizeQuestions ? "Да" : "Нет"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Количество вопросов на участника</h4>
+                    <p className="text-white">{olympiad.questionsPerParticipant || "Все вопросы"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Стоимость участия</h4>
+                    <p className="text-white">{olympiad.price ? `${olympiad.price / 100} руб.` : "Бесплатно"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Questions */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-red-200/10 p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Вопросы</h3>
+                <div className="space-y-4">
+                  {questions.map((question, index) => (
+                    <div key={question.id} className="p-4 bg-white/5 rounded-lg">
+                      <h4 className="text-lg font-medium text-white mb-2">
+                        Вопрос {index + 1}
+                      </h4>
+                      <div className="space-y-2">
+                        <p className="text-red-200">{question.question}</p>
+                        <div className="text-sm text-red-200/80">
+                          <p>Тип: {
+                            question.type === "text" ? "Текстовый ответ" :
+                            question.type === "multiple_choice" ? "С вариантами ответа" :
+                            "На сопоставление"
+                          }</p>
+                          {question.type === "multiple_choice" && question.choices && (
+                            <div className="mt-2">
+                              <p className="mb-1">Варианты ответов:</p>
+                              <ul className="list-disc list-inside">
+                                {question.choices.map((choice, i) => (
+                                  <li key={i} className={choice === question.correctAnswer ? "text-green-400" : ""}>
+                                    {choice} {choice === question.correctAnswer && "(правильный)"}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {question.type === "matching" && question.matchingPairs && (
+                            <div className="mt-2">
+                              <p className="mb-1">Пары для сопоставления:</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {question.matchingPairs.map((pair, i) => (
+                                  <div key={i} className="flex gap-2">
+                                    <span>{pair.left}</span>
+                                    <span>→</span>
+                                    <span>{pair.right}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {question.type === "text" && (
+                            <div className="mt-2">
+                              <p>Правильный ответ: {question.correctAnswer}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {questions.length === 0 && (
+                    <p className="text-red-200/80">Вопросы не добавлены</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Prizes */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-red-200/10 p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Призы</h3>
+                <div className="space-y-4">
+                  {prizes.map((prize) => (
+                    <div key={prize.id} className="p-4 bg-white/5 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="text-lg font-medium text-white">
+                            {prize.placement} место
+                          </h4>
+                          {prize.promoCode && (
+                            <p className="text-sm text-red-200/80">
+                              Промокод: {prize.promoCode}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {prizes.length === 0 && (
+                    <p className="text-red-200/80">Призы не добавлены</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-6">
             <button
               onClick={() => router.back()}
               className="px-6 py-3 text-sm font-medium text-red-200 bg-red-950/50 border border-red-200/20 rounded-lg hover:bg-red-900/50 transition-colors"
