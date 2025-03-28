@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import ChineseLoader from "@/components/ChineseLoader";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import ChineseLoader from '@/components/ChineseLoader';
 
 interface Participant {
   id: string;
@@ -38,12 +38,12 @@ interface Olympiad {
 interface Question {
   id: string;
   question: string;
-  type: "text" | "multiple_choice" | "matching";
+  type: 'text' | 'multiple_choice' | 'matching';
   choices?: string[];
   matchingPairs?: { left: string; right: string }[];
   correctAnswer: string;
   media?: {
-    type: "image" | "video" | "audio";
+    type: 'image' | 'video' | 'audio';
     url: string;
   };
 }
@@ -62,19 +62,25 @@ interface PromoCodeModalProps {
   participantEmail: string;
 }
 
-const PromoCodeModal = ({ isOpen, onClose, onSubmit, participantName, participantEmail }: PromoCodeModalProps) => {
-  const [promoCode, setPromoCode] = useState("");
+const PromoCodeModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  participantName,
+  participantEmail,
+}: PromoCodeModalProps) => {
+  const [promoCode, setPromoCode] = useState('');
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-xl p-6 max-w-md w-full mx-4"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-xl font-semibold text-gray-900 mb-4">
           Отправка приза
@@ -111,7 +117,7 @@ const PromoCodeModal = ({ isOpen, onClose, onSubmit, participantName, participan
           <button
             onClick={() => {
               onSubmit(promoCode);
-              setPromoCode("");
+              setPromoCode('');
             }}
             disabled={!promoCode.trim()}
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
@@ -136,15 +142,25 @@ export default function ManageOlympiadPage({
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEndingOlympiad, setIsEndingOlympiad] = useState(false);
-  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [selectedParticipant, setSelectedParticipant] =
+    useState<Participant | null>(null);
   const [isPromoCodeModalOpen, setIsPromoCodeModalOpen] = useState(false);
-  const [sendingPrizeForId, setSendingPrizeForId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'participants' | 'settings'>('participants');
+  const [sendingPrizeForId, setSendingPrizeForId] = useState<string | null>(
+    null
+  );
+  const [activeTab, setActiveTab] = useState<'participants' | 'settings'>(
+    'participants'
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [olympiadResponse, participantsResponse, questionsResponse, prizesResponse] = await Promise.all([
+        const [
+          olympiadResponse,
+          participantsResponse,
+          questionsResponse,
+          prizesResponse,
+        ] = await Promise.all([
           fetch(`/api/olympiads/${params.id}`),
           fetch(`/api/olympiads/${params.id}/participants`),
           fetch(`/api/olympiads/${params.id}/questions`),
@@ -152,7 +168,7 @@ export default function ManageOlympiadPage({
         ]);
 
         if (!olympiadResponse.ok) {
-          throw new Error("Failed to fetch olympiad");
+          throw new Error('Failed to fetch olympiad');
         }
 
         const olympiadData = await olympiadResponse.json();
@@ -173,7 +189,7 @@ export default function ManageOlympiadPage({
           setPrizes(prizesData);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -183,24 +199,28 @@ export default function ManageOlympiadPage({
   }, [params.id]);
 
   const handleEndOlympiad = async () => {
-    if (!confirm("Вы уверены, что хотите завершить олимпиаду? Это действие нельзя отменить.")) {
+    if (
+      !confirm(
+        'Вы уверены, что хотите завершить олимпиаду? Это действие нельзя отменить.'
+      )
+    ) {
       return;
     }
 
     setIsEndingOlympiad(true);
     try {
       const response = await fetch(`/api/olympiads/${params.id}/end`, {
-        method: "POST",
+        method: 'POST',
       });
 
       if (!response.ok) {
-        throw new Error("Failed to end olympiad");
+        throw new Error('Failed to end olympiad');
       }
 
-      router.push("/dashboard");
+      router.push('/dashboard');
     } catch (error) {
-      console.error("Error ending olympiad:", error);
-      alert("Ошибка при завершении олимпиады");
+      console.error('Error ending olympiad:', error);
+      alert('Ошибка при завершении олимпиады');
     } finally {
       setIsEndingOlympiad(false);
     }
@@ -216,12 +236,12 @@ export default function ManageOlympiadPage({
 
     setSendingPrizeForId(selectedParticipant.id);
     setIsPromoCodeModalOpen(false);
-    
+
     try {
       const response = await fetch(`/api/olympiads/${params.id}/send-prizes`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           participantId: selectedParticipant.id,
@@ -231,13 +251,15 @@ export default function ManageOlympiadPage({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to send prize");
+        throw new Error(error.message || 'Failed to send prize');
       }
 
-      alert("Приз успешно отправлен!");
+      alert('Приз успешно отправлен!');
     } catch (error) {
-      console.error("Error sending prize:", error);
-      alert(error instanceof Error ? error.message : "Ошибка при отправке приза");
+      console.error('Error sending prize:', error);
+      alert(
+        error instanceof Error ? error.message : 'Ошибка при отправке приза'
+      );
     } finally {
       setSendingPrizeForId(null);
       setSelectedParticipant(null);
@@ -261,9 +283,7 @@ export default function ManageOlympiadPage({
               <span className="text-red-200">汉语</span>
               <span>{olympiad.title}</span>
             </h1>
-            <p className="mt-2 text-red-200/80">
-              Управление олимпиадой
-            </p>
+            <p className="mt-2 text-red-200/80">Управление олимпиадой</p>
           </div>
 
           {/* Olympiad Info */}
@@ -274,12 +294,20 @@ export default function ManageOlympiadPage({
                 <p className="text-white">{olympiad.level}</p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-red-200/80">Дата начала</h3>
-                <p className="text-white">{new Date(olympiad.startDate).toLocaleDateString()}</p>
+                <h3 className="text-sm font-medium text-red-200/80">
+                  Дата начала
+                </h3>
+                <p className="text-white">
+                  {new Date(olympiad.startDate).toLocaleDateString()}
+                </p>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-red-200/80">Дата окончания</h3>
-                <p className="text-white">{new Date(olympiad.endDate).toLocaleDateString()}</p>
+                <h3 className="text-sm font-medium text-red-200/80">
+                  Дата окончания
+                </h3>
+                <p className="text-white">
+                  {new Date(olympiad.endDate).toLocaleDateString()}
+                </p>
               </div>
             </div>
           </div>
@@ -316,10 +344,7 @@ export default function ManageOlympiadPage({
               </h2>
               {/* Existing participants list */}
               {participants.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="bg-white/5 rounded-lg p-4"
-                >
+                <div key={participant.id} className="bg-white/5 rounded-lg p-4">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-lg font-medium text-white">
@@ -332,10 +357,17 @@ export default function ManageOlympiadPage({
                         <p>Возраст: {participant.age} лет</p>
                         <p>Тип обучения: {participant.educationType}</p>
                         {participant.grade && (
-                          <p>{participant.educationType === "school" ? "Класс" : "Курс"}: {participant.grade}</p>
+                          <p>
+                            {participant.educationType === 'school'
+                              ? 'Класс'
+                              : 'Курс'}
+                            : {participant.grade}
+                          </p>
                         )}
                         {participant.institutionName && (
-                          <p>Учебное заведение: {participant.institutionName}</p>
+                          <p>
+                            Учебное заведение: {participant.institutionName}
+                          </p>
                         )}
                         <p>Телефон: {participant.phoneNumber}</p>
                       </div>
@@ -343,7 +375,9 @@ export default function ManageOlympiadPage({
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-right">
                         <div className="text-lg font-medium text-white">
-                          {participant.score ? `${participant.score}%` : "Не завершено"}
+                          {participant.score
+                            ? `${participant.score}%`
+                            : 'Не завершено'}
                         </div>
                         {participant.place && (
                           <div className="text-sm text-red-200">
@@ -351,100 +385,151 @@ export default function ManageOlympiadPage({
                           </div>
                         )}
                       </div>
-                      {olympiad.hasPrizes && participant.place && parseInt(participant.place) <= 3 && (
-                        <button
-                          onClick={() => handleSendPrize(participant)}
-                          disabled={sendingPrizeForId === participant.id}
-                          className="px-3 py-1 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                        >
-                          {sendingPrizeForId === participant.id
-                            ? "Отправка..."
-                            : "Отправить приз"}
-                        </button>
-                      )}
+                      {olympiad.hasPrizes &&
+                        participant.place &&
+                        parseInt(participant.place) <= 3 && (
+                          <button
+                            onClick={() => handleSendPrize(participant)}
+                            disabled={sendingPrizeForId === participant.id}
+                            className="px-3 py-1 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                          >
+                            {sendingPrizeForId === participant.id
+                              ? 'Отправка...'
+                              : 'Отправить приз'}
+                          </button>
+                        )}
                     </div>
                   </div>
                 </div>
               ))}
               {participants.length === 0 && (
-                <p className="text-red-200/80">
-                  Пока нет участников
-                </p>
+                <p className="text-red-200/80">Пока нет участников</p>
               )}
             </div>
           ) : (
             <div className="space-y-6">
               {/* General Settings */}
               <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-red-200/10 p-6">
-                <h3 className="text-xl font-semibold text-white mb-4">Общие настройки</h3>
+                <h3 className="text-xl font-semibold text-white mb-4">
+                  Общие настройки
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Описание</h4>
-                    <p className="text-white">{olympiad.description || "Нет описания"}</p>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">
+                      Описание
+                    </h4>
+                    <p className="text-white">
+                      {olympiad.description || 'Нет описания'}
+                    </p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Длительность</h4>
-                    <p className="text-white">{Math.floor(olympiad.duration || 0) / 60} минут</p>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">
+                      Длительность
+                    </h4>
+                    <p className="text-white">
+                      {Math.floor(olympiad.duration || 0) / 60} минут
+                    </p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Случайный порядок вопросов</h4>
-                    <p className="text-white">{olympiad.randomizeQuestions ? "Да" : "Нет"}</p>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">
+                      Случайный порядок вопросов
+                    </h4>
+                    <p className="text-white">
+                      {olympiad.randomizeQuestions ? 'Да' : 'Нет'}
+                    </p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Количество вопросов на участника</h4>
-                    <p className="text-white">{olympiad.questionsPerParticipant || "Все вопросы"}</p>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">
+                      Количество вопросов на участника
+                    </h4>
+                    <p className="text-white">
+                      {olympiad.questionsPerParticipant || 'Все вопросы'}
+                    </p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-red-200/80 mb-2">Стоимость участия</h4>
-                    <p className="text-white">{olympiad.price ? `${olympiad.price / 100} руб.` : "Бесплатно"}</p>
+                    <h4 className="text-sm font-medium text-red-200/80 mb-2">
+                      Стоимость участия
+                    </h4>
+                    <p className="text-white">
+                      {olympiad.price
+                        ? `${olympiad.price / 100} руб.`
+                        : 'Бесплатно'}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Questions */}
               <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-red-200/10 p-6">
-                <h3 className="text-xl font-semibold text-white mb-4">Вопросы</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold text-white">Вопросы</h3>
+                  <button
+                    onClick={() =>
+                      router.push(`/olympiads/${params.id}/questions`)
+                    }
+                    className="px-3 py-1 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Редактировать вопросы
+                  </button>
+                </div>
                 <div className="space-y-4">
                   {questions.map((question, index) => (
-                    <div key={question.id} className="p-4 bg-white/5 rounded-lg">
+                    <div
+                      key={question.id}
+                      className="p-4 bg-white/5 rounded-lg"
+                    >
                       <h4 className="text-lg font-medium text-white mb-2">
                         Вопрос {index + 1}
                       </h4>
                       <div className="space-y-2">
                         <p className="text-red-200">{question.question}</p>
                         <div className="text-sm text-red-200/80">
-                          <p>Тип: {
-                            question.type === "text" ? "Текстовый ответ" :
-                            question.type === "multiple_choice" ? "С вариантами ответа" :
-                            "На сопоставление"
-                          }</p>
-                          {question.type === "multiple_choice" && question.choices && (
-                            <div className="mt-2">
-                              <p className="mb-1">Варианты ответов:</p>
-                              <ul className="list-disc list-inside">
-                                {question.choices.map((choice, i) => (
-                                  <li key={i} className={choice === question.correctAnswer ? "text-green-400" : ""}>
-                                    {choice} {choice === question.correctAnswer && "(правильный)"}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {question.type === "matching" && question.matchingPairs && (
-                            <div className="mt-2">
-                              <p className="mb-1">Пары для сопоставления:</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {question.matchingPairs.map((pair, i) => (
-                                  <div key={i} className="flex gap-2">
-                                    <span>{pair.left}</span>
-                                    <span>→</span>
-                                    <span>{pair.right}</span>
-                                  </div>
-                                ))}
+                          <p>
+                            Тип:{' '}
+                            {question.type === 'text'
+                              ? 'Текстовый ответ'
+                              : question.type === 'multiple_choice'
+                              ? 'С вариантами ответа'
+                              : 'На сопоставление'}
+                          </p>
+                          {question.type === 'multiple_choice' &&
+                            question.choices && (
+                              <div className="mt-2">
+                                <p className="mb-1">Варианты ответов:</p>
+                                <ul className="list-disc list-inside">
+                                  {question.choices.map((choice, i) => (
+                                    <li
+                                      key={i}
+                                      className={
+                                        choice === question.correctAnswer
+                                          ? 'text-green-400'
+                                          : ''
+                                      }
+                                    >
+                                      {choice}{' '}
+                                      {choice === question.correctAnswer &&
+                                        '(правильный)'}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
-                            </div>
-                          )}
-                          {question.type === "text" && (
+                            )}
+                          {question.type === 'matching' &&
+                            question.matchingPairs && (
+                              <div className="mt-2">
+                                <p className="mb-1">Пары для сопоставления:</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {question.matchingPairs.map((pair, i) => (
+                                    <div key={i} className="flex gap-2">
+                                      <span>{pair.left}</span>
+                                      <span>→</span>
+                                      <span>{pair.right}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          {question.type === 'text' && (
                             <div className="mt-2">
                               <p>Правильный ответ: {question.correctAnswer}</p>
                             </div>
@@ -489,19 +574,27 @@ export default function ManageOlympiadPage({
 
           {/* Actions */}
           <div className="flex justify-between items-center mt-6">
-            <button
-              onClick={() => router.back()}
-              className="px-6 py-3 text-sm font-medium text-red-200 bg-red-950/50 border border-red-200/20 rounded-lg hover:bg-red-900/50 transition-colors"
-            >
-              Назад
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => router.back()}
+                className="px-6 py-3 text-sm font-medium text-red-200 bg-red-950/50 border border-red-200/20 rounded-lg hover:bg-red-900/50 transition-colors"
+              >
+                Назад
+              </button>
+              <button
+                onClick={() => router.push(`/olympiads/${params.id}/edit`)}
+                className="px-6 py-3 text-sm font-medium text-yellow-200 bg-red-950/50 border border-yellow-200/20 rounded-lg hover:bg-red-900/50 transition-colors"
+              >
+                Редактировать
+              </button>
+            </div>
             {!olympiad.isCompleted && (
               <button
                 onClick={handleEndOlympiad}
                 disabled={isEndingOlympiad}
                 className="px-6 py-3 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
               >
-                {isEndingOlympiad ? "Завершение..." : "Завершить олимпиаду"}
+                {isEndingOlympiad ? 'Завершение...' : 'Завершить олимпиаду'}
               </button>
             )}
           </div>
@@ -515,8 +608,8 @@ export default function ManageOlympiadPage({
           setSelectedParticipant(null);
         }}
         onSubmit={handlePromoCodeSubmit}
-        participantName={selectedParticipant?.fullName || ""}
-        participantEmail={selectedParticipant?.email || ""}
+        participantName={selectedParticipant?.fullName || ''}
+        participantEmail={selectedParticipant?.email || ''}
       />
     </div>
   );
