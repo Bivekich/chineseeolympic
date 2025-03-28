@@ -9,17 +9,8 @@ services:
     restart: always
     ports:
       - '80:3000'
-    environment:
-      - DATABASE_URL=postgresql://gen_user:VQcv_6f3y3@94.198.219.196:5432/default_db
-      - JWT_SECRET=debb2efc19d58abf9352a2487e9bd2a86d22806a66f114ad95466f2766e123cc64880bd209c42a7c4bc087b94a51c9cf1d59948b1f720abf153b1892703dce08a92b838b6050137692ec440d41c213d3966756868d14d9fe5897c53eede689f32caaa14b371d53f6da49be94a928e6eaeed632ebef4691c316490b4e468eeee5
-      - SMTP_HOST=smtp.timeweb.ru
-      - SMTP_PORT=25
-      - SMTP_USER=noreply@chinesestar.ru
-      - SMTP_PASSWORD=DU-1GlFEER
-      - NEXT_PUBLIC_APP_URL=https://chinesestar.ru
-      - SENDER_EMAIL=noreply@chinesestar.ru
-      - UKASSA_API_KEY=test_9c9pH6FhwuAdxciVK5vODs10fbZt8eWJzAxlbjF3wt8
-      - UKASSA_SHOP_ID=1030211
+    env_file:
+      - .env
     networks:
       - app_network
 
