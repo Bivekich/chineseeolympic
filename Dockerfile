@@ -29,6 +29,9 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.js ./
 
+# Устанавливаем curl для healthcheck
+RUN apk --no-cache add curl
+
 # Создаем пользователя для запуска приложения
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -38,6 +41,10 @@ USER nextjs
 
 # Открываем порт
 EXPOSE 3000
+
+# Добавляем healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/ || exit 1
 
 # Запускаем приложение
 CMD ["npm", "start"]
