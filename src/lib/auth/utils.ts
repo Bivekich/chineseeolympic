@@ -64,6 +64,9 @@ export async function comparePasswords(
 
 export async function sendVerificationEmail(email: string, token: string) {
   try {
+    // Инициализируем транспортер перед отправкой
+    initializeEmailTransporter();
+
     console.log('Sending verification email:', {
       from: SENDER_EMAIL,
       to: email,
@@ -118,6 +121,10 @@ export async function sendVerificationEmail(email: string, token: string) {
         </body>
       </html>
     `;
+
+    if (!transporter) {
+      throw new Error('Email transporter was not initialized');
+    }
 
     const info = await transporter.sendMail({
       from: `"汉语之星" <${SENDER_EMAIL}>`,
