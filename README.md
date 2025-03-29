@@ -19,8 +19,16 @@ DATABASE_URL=your_neon_database_url
 # JWT
 JWT_SECRET=your_jwt_secret_at_least_32_chars_long
 
-# Email (Resend)
-RESEND_API_KEY=your_resend_api_key
+# Email (SMTP)
+SMTP_HOST=your_smtp_host
+SMTP_PORT=your_smtp_port
+SMTP_USER=your_smtp_user
+SMTP_PASSWORD=your_smtp_password
+SENDER_EMAIL=your_sender_email
+
+# Payment (UKassa)
+UKASSA_API_KEY=your_ukassa_api_key
+UKASSA_SHOP_ID=your_ukassa_shop_id
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -36,6 +44,18 @@ npx drizzle-kit push:pg
 
 ```bash
 npm run dev
+```
+
+## Docker Setup
+
+1. Make sure you have Docker and Docker Compose installed.
+
+2. Create a `.env` file with all the required environment variables.
+
+3. Build and run the containers:
+
+```bash
+docker-compose up -d
 ```
 
 ## Features
@@ -55,7 +75,7 @@ npm run dev
 - Tailwind CSS
 - Drizzle ORM
 - Neon PostgreSQL
-- Resend for email
+- SMTP for email
 - Jose for JWT
 - bcrypt for password hashing
 
@@ -63,7 +83,13 @@ npm run dev
 
 - `DATABASE_URL`: Your Neon PostgreSQL database URL
 - `JWT_SECRET`: A secure secret key for JWT token generation (at least 32 characters)
-- `RESEND_API_KEY`: API key from Resend for sending emails
+- `SMTP_HOST`: SMTP server host
+- `SMTP_PORT`: SMTP server port
+- `SMTP_USER`: SMTP server username
+- `SMTP_PASSWORD`: SMTP server password
+- `SENDER_EMAIL`: Email address for sending notifications
+- `UKASSA_API_KEY`: YooKassa payment API key
+- `UKASSA_SHOP_ID`: YooKassa shop ID
 - `NEXT_PUBLIC_APP_URL`: The public URL of your application
 
 ## Development
