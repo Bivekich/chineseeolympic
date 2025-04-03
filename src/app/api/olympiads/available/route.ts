@@ -47,7 +47,7 @@ export async function GET() {
 
     // Get prizes for each olympiad
     const olympiadsWithPrizes = await Promise.all(
-      availableOlympiads.map(async (olympiad) => {
+      availableOlympiads.map(async (olympiad: any) => {
         if (olympiad.hasPrizes) {
           const olympiadPrizes = await db
             .select({
@@ -60,7 +60,7 @@ export async function GET() {
 
           // Format prizes information
           const prizesText = olympiadPrizes
-            .map((prize) => {
+            .map((prize: any) => {
               const place =
                 prize.placement === 1
                   ? '1-е место'
@@ -74,6 +74,12 @@ export async function GET() {
               }`;
             })
             .join('\n');
+
+          // Check if has any prizes with free positions
+          const hasFreePositions = olympiadPrizes.some(
+            (prize: any) =>
+              parseInt(prize.positions) > parseInt(prize.filledPositions || '0')
+          );
 
           return {
             ...olympiad,

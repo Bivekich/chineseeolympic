@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { olympiads, participantDetails, participantResults } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
-import { verifyAuth, verifyAdmin } from "@/lib/auth";
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import {
+  olympiads,
+  participantDetails,
+  participantResults,
+} from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { verifyAuth, verifyAdmin } from '@/lib/auth';
 
 export async function GET(
   request: Request,
@@ -13,10 +17,7 @@ export async function GET(
     const isAdmin = await verifyAdmin();
 
     if (!userId || !isAdmin) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     // Get the olympiad
@@ -24,20 +25,17 @@ export async function GET(
       .select()
       .from(olympiads)
       .where(eq(olympiads.id, params.id))
-      .then((res) => res[0]);
+      .then((res: any[]) => res[0]);
 
     if (!olympiad) {
       return NextResponse.json(
-        { message: "Olympiad not found" },
+        { message: 'Olympiad not found' },
         { status: 404 }
       );
     }
 
     if (olympiad.creatorId !== userId) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     // First get all participant details
@@ -66,15 +64,18 @@ export async function GET(
 
     // Create a map of userId to their latest result
     const latestResultsByUser = new Map();
-    results.forEach(result => {
+    results.forEach((result: any) => {
       const existingResult = latestResultsByUser.get(result.userId);
-      if (!existingResult || new Date(result.completedAt) > new Date(existingResult.completedAt)) {
+      if (
+        !existingResult ||
+        new Date(result.completedAt) > new Date(existingResult.completedAt)
+      ) {
         latestResultsByUser.set(result.userId, result);
       }
     });
 
     // Combine participant details with their latest result
-    const participantsWithResults = participants.map(participant => {
+    const participantsWithResults = participants.map((participant: any) => {
       const latestResult = latestResultsByUser.get(participant.userId);
       return {
         ...participant,
@@ -85,15 +86,18 @@ export async function GET(
     });
 
     // Sort participants by completion time
-    const sortedParticipants = participantsWithResults
-      .sort((a, b) => {
+    const sortedParticipants = participantsWithResults.sort(
+      (a: any, b: any) => {
         // Put participants who haven't completed the test at the end
         if (!a.completedAt && !b.completedAt) return 0;
         if (!a.completedAt) return 1;
         if (!b.completedAt) return -1;
         // Sort by completion time, earliest first
-        return new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime();
-      });
+        return (
+          new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+        );
+      }
+    );
 
     // Return both olympiad and participants data
     return NextResponse.json({
@@ -109,10 +113,10 @@ export async function GET(
       participants: sortedParticipants,
     });
   } catch (error) {
-    console.error("Error fetching participants:", error);
+    console.error('Error fetching participants:', error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}

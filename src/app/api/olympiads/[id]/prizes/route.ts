@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { prizes, olympiads } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { verifyAuth } from "@/lib/auth";
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { prizes, olympiads } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { verifyAuth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -11,19 +11,19 @@ export async function GET(
   try {
     const userId = await verifyAuth();
     if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const olympiadPrizes = await db.query.prizes.findMany({
       where: eq(prizes.olympiadId, params.id),
-      orderBy: (fields) => fields.placement,
+      orderBy: (fields: any) => fields.placement,
     });
 
     return NextResponse.json(olympiadPrizes);
   } catch (error) {
-    console.error("Error fetching prizes:", error);
+    console.error('Error fetching prizes:', error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -36,7 +36,7 @@ export async function PUT(
   try {
     const userId = await verifyAuth();
     if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const { prizes: newPrizes, publish } = await request.json();
@@ -44,7 +44,7 @@ export async function PUT(
     // Validate prizes
     if (!Array.isArray(newPrizes) || newPrizes.length === 0) {
       return NextResponse.json(
-        { message: "Invalid prizes data" },
+        { message: 'Invalid prizes data' },
         { status: 400 }
       );
     }
@@ -53,7 +53,7 @@ export async function PUT(
     for (const prize of newPrizes) {
       if (!prize.placement) {
         return NextResponse.json(
-          { message: "All prizes must have a placement" },
+          { message: 'All prizes must have a placement' },
           { status: 400 }
         );
       }
@@ -66,17 +66,17 @@ export async function PUT(
 
     if (!olympiad) {
       return NextResponse.json(
-        { message: "Olympiad not found" },
+        { message: 'Olympiad not found' },
         { status: 404 }
       );
     }
 
     if (olympiad.creatorId !== userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     // Start a transaction
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       // Delete existing prizes
       await tx.delete(prizes).where(eq(prizes.olympiadId, params.id));
 
@@ -109,11 +109,11 @@ export async function PUT(
       }
     });
 
-    return NextResponse.json({ message: "Prizes updated successfully" });
+    return NextResponse.json({ message: 'Prizes updated successfully' });
   } catch (error) {
-    console.error("Error updating prizes:", error);
+    console.error('Error updating prizes:', error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }

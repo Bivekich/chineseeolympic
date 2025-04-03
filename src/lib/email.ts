@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import path from 'path';
+import fs from 'fs';
 
 // Перемещаем проверки переменных в функцию инициализации
 let transporter: nodemailer.Transporter | null = null;
@@ -42,13 +44,24 @@ function initializeEmailTransporter() {
   SENDER_EMAIL = process.env.SENDER_EMAIL;
 }
 
-interface SendEmailParams {
+type SendEmailParams = {
   to: string;
   subject: string;
   html: string;
-}
+  attachments?: Attachment[];
+};
 
-export async function sendEmail({ to, subject, html }: SendEmailParams) {
+type Attachment = {
+  filename: string;
+  path: string;
+};
+
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  attachments = [],
+}: SendEmailParams) {
   // Инициализируем транспортер перед отправкой
   initializeEmailTransporter();
 
@@ -56,6 +69,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
   console.log('From:', SENDER_EMAIL);
   console.log('To:', to);
   console.log('Subject:', subject);
+  console.log('Attachments:', attachments.length > 0 ? attachments : 'None');
   console.log('SMTP Config:', {
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
@@ -72,11 +86,39 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
       throw new Error('Email transporter was not initialized');
     }
 
+    // Подготавливаем вложения
+    const emailAttachments = attachments
+      .map((attachment) => {
+        // Проверяем, существует ли файл
+        const absolutePath = path.isAbsolute(attachment.path)
+          ? attachment.path
+          : path.join(
+              process.cwd(),
+              'public',
+              attachment.path.replace(/^\//, '')
+            );
+
+        if (!fs.existsSync(absolutePath)) {
+          console.warn(`Warning: Attachment file not found: ${absolutePath}`);
+          return null;
+        }
+
+        return {
+          filename: attachment.filename,
+          path: absolutePath,
+        };
+      })
+      .filter(
+        (attachment): attachment is { filename: string; path: string } =>
+          attachment !== null
+      );
+
     const info = await transporter.sendMail({
       from: `"汉语之星" <${SENDER_EMAIL}>`,
       to,
       subject,
       html,
+      attachments: emailAttachments,
     });
 
     console.log('\n=== Email Sent Successfully ===');

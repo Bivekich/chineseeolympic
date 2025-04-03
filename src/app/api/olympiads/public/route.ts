@@ -38,7 +38,7 @@ export async function GET() {
 
     // Get prizes for each olympiad
     const olympiadsWithPrizes = await Promise.all(
-      availableOlympiads.map(async (olympiad) => {
+      availableOlympiads.map(async (olympiad: any) => {
         if (olympiad.hasPrizes) {
           const olympiadPrizes = await db
             .select({
@@ -50,7 +50,7 @@ export async function GET() {
             .orderBy(prizes.placement);
 
           // Format prizes information
-          const prizesInfo = olympiadPrizes.map((prize) => ({
+          const prizesInfo = olympiadPrizes.map((prize: any) => ({
             placement: prize.placement,
             description: prize.description,
           }));

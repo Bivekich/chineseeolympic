@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { olympiads, participantResults } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { verifyAuth, verifyAdmin } from "@/lib/auth";
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { olympiads, participantResults } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { verifyAuth, verifyAdmin } from '@/lib/auth';
 
 export async function POST(
   request: Request,
@@ -13,10 +13,7 @@ export async function POST(
     const isAdmin = await verifyAdmin();
 
     if (!userId || !isAdmin) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     // Get the olympiad
@@ -24,25 +21,22 @@ export async function POST(
       .select()
       .from(olympiads)
       .where(eq(olympiads.id, params.id))
-      .then((res) => res[0]);
+      .then((res: any[]) => res[0]);
 
     if (!olympiad) {
       return NextResponse.json(
-        { message: "Olympiad not found" },
+        { message: 'Olympiad not found' },
         { status: 404 }
       );
     }
 
     if (olympiad.creatorId !== userId) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     if (olympiad.isCompleted) {
       return NextResponse.json(
-        { message: "Olympiad is already completed" },
+        { message: 'Olympiad is already completed' },
         { status: 400 }
       );
     }
@@ -54,13 +48,13 @@ export async function POST(
       .where(eq(participantResults.olympiadId, params.id));
 
     // Sort results by score
-    const sortedResults = results.sort((a, b) => 
-      parseInt(b.score) - parseInt(a.score)
+    const sortedResults = results.sort(
+      (a: any, b: any) => parseInt(b.score) - parseInt(a.score)
     );
 
     // Update places for participants
     await Promise.all(
-      sortedResults.map((result, index) =>
+      sortedResults.map((result: any, index: number) =>
         db
           .update(participantResults)
           .set({ place: (index + 1).toString() })
@@ -77,12 +71,12 @@ export async function POST(
       })
       .where(eq(olympiads.id, params.id));
 
-    return NextResponse.json({ message: "Olympiad ended successfully" });
+    return NextResponse.json({ message: 'Olympiad ended successfully' });
   } catch (error) {
-    console.error("Error ending olympiad:", error);
+    console.error('Error ending olympiad:', error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}

@@ -143,7 +143,7 @@ export default async function OlympiadPage({ params }: PageProps) {
             <h2 className="text-xl font-semibold mb-3">Призы</h2>
             <div className="bg-gray-700/50 rounded-lg p-4">
               <ul className="space-y-2">
-                {olympiadPrizes.map((prize) => (
+                {olympiadPrizes.map((prize: any) => (
                   <li key={prize.id} className="flex items-start gap-3">
                     <div className="font-bold text-yellow-500 min-w-[80px]">
                       {prize.placement === 1
