@@ -228,16 +228,13 @@ export async function POST(
                   data.participant_details.fullName
                 }!</p>
                 <p style="color: #4b5563;">Олимпиада: ${olympiad.title}</p>
-                <p style="color: #4b5563;">Ваш результат: ${
-                  data.participant_results.score
-                }%</p>
                 <p style="color: #4b5563;">Место: ${place} из ${
           results.length
         }</p>
                 ${
                   isWinner && prize
                     ? `<div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
-                        <p style="color: #92400e; margin: 0;">🏆 Поздравляем с ${place}-м местом!</p>
+                        <p style="color: #92400e; margin: 0;">🏆 Поздравляем с ${place} местом!</p>
                         <p style="color: #92400e; margin: 10px 0;">🎁 Ваш приз: ${
                           prize.description || `Приз за ${place} место`
                         }</p>
