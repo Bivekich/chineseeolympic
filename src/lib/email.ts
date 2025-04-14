@@ -1,10 +1,17 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { TransportOptions } from 'nodemailer';
 import path from 'path';
 import fs from 'fs';
 
 // Перемещаем проверки переменных в функцию инициализации
 let transporter: nodemailer.Transporter | null = null;
 let SENDER_EMAIL: string | null = null;
+
+interface SMTPError extends Error {
+  code?: string;
+  command?: string;
+  responseCode?: number;
+  response?: string;
+}
 
 function initializeEmailTransporter() {
   if (transporter) return;
@@ -30,18 +37,47 @@ function initializeEmailTransporter() {
     throw new Error('SENDER_EMAIL is not set in environment variables');
   }
 
+  const port = parseInt(process.env.SMTP_PORT);
+  const secure = port === 465; // Use SSL for port 465
+
+  console.log('Initializing email transporter with config:', {
+    host: process.env.SMTP_HOST,
+    port: port,
+    user: process.env.SMTP_USER,
+    secure: secure,
+  });
+
   // Create a transporter using SMTP
   transporter = nodemailer.createTransport({
+    pool: true,
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT),
-    secure: false, // true for 465, false for other ports
+    port: port,
+    secure: secure, // true for 465, false for other ports
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
     },
-  });
+    debug: true, // Enable debug logging
+    logger: true, // Enable built-in logger
+    connectionTimeout: 30000, // Increase timeout to 30 seconds
+  } as TransportOptions);
 
   SENDER_EMAIL = process.env.SENDER_EMAIL;
+
+  // Verify connection configuration
+  transporter.verify(function(error: SMTPError | null, success: boolean) {
+    if (error) {
+      console.error('Email transporter verification failed:', {
+        error: error.message,
+        code: error.code,
+        command: error.command,
+        responseCode: error.responseCode,
+        response: error.response,
+      });
+    } else {
+      console.log('Email server is ready to take our messages');
+    }
+  });
 }
 
 type SendEmailParams = {
@@ -74,6 +110,7 @@ export async function sendEmail({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
     user: process.env.SMTP_USER,
+    secure: parseInt(process.env.SMTP_PORT || '0') === 465,
     passwordPresent: !!process.env.SMTP_PASSWORD,
   });
 
@@ -123,11 +160,18 @@ export async function sendEmail({
 
     console.log('\n=== Email Sent Successfully ===');
     console.log('Message ID:', info.messageId);
+    if (info.response) {
+      console.log('Server response:', info.response);
+    }
     return info;
   } catch (error) {
     console.error('\n=== Email Send Failed ===');
     console.error('Error details:', {
       error: error instanceof Error ? error.message : JSON.stringify(error),
+      code: (error as any).code,
+      command: (error as any).command,
+      responseCode: (error as any).responseCode,
+      response: (error as any).response,
       stack: error instanceof Error ? error.stack : undefined,
     });
     throw error;

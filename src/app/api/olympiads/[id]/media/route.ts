@@ -59,15 +59,6 @@ export async function POST(
       );
     }
 
-    // Validate file size (50MB limit)
-    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { message: "File size exceeds 50MB limit" },
-        { status: 400 }
-      );
-    }
-
     // Generate a unique filename
     const fileExtension = file.name.split(".").pop();
     const uniqueFilename = `${createId()}.${fileExtension}`;

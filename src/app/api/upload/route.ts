@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyAuth, verifyAdmin } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
+import { mkdir, rename } from 'fs/promises';
 import { join } from 'path';
 import formidable from 'formidable';
 import { existsSync } from 'fs';
@@ -18,7 +18,7 @@ const parseForm = async (
   return new Promise((resolve, reject) => {
     const form = formidable({
       maxFiles: 1,
-      maxFileSize: 50 * 1024 * 1024, // 50MB
+      maxFileSize: Infinity, // Remove file size limit
       allowEmptyFiles: false,
       filter: function ({ mimetype }) {
         // Accept only images, videos, and audio files
@@ -32,7 +32,12 @@ const parseForm = async (
     });
 
     form.parse(req, (err, fields, files) => {
-      if (err) reject(err);
+      if (err) {
+        // Log formidable specific errors
+        console.error("Formidable parsing error:", err);
+        reject(err); // Reject the promise
+        return;
+      }
       resolve({ fields, files });
     });
   });
@@ -60,7 +65,8 @@ export async function POST(req: Request) {
     }
 
     // Parse the form data
-    const { files } = await parseForm(req as Request & IncomingMessage);
+    // Cast req to include IncomingMessage properties for formidable
+    const { files } = await parseForm(req as unknown as Request & IncomingMessage);
     const file = files.file?.[0];
 
     if (!file) {
@@ -75,9 +81,10 @@ export async function POST(req: Request) {
       .toString(36)
       .substring(2)}.${extension}`;
 
-    // Move the file to the uploads directory
+    // Move the file from the temp path to the uploads directory
+    const tempFilePath = file.filepath;
     const filePath = join(uploadDir, filename);
-    await writeFile(filePath, await readFile(file.filepath));
+    await rename(tempFilePath, filePath); // Use rename for efficiency
 
     // Generate the URL for the uploaded file
     const fileUrl = `/uploads/olympiad-media/${filename}`;
@@ -91,27 +98,30 @@ export async function POST(req: Request) {
     } else if (file.mimetype?.includes('audio/')) {
       mediaType = 'audio';
     } else {
-      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 });
+      // If the filter passed, this shouldn't happen, but good to have a fallback
+      console.warn(`Unexpected file type passed filter: ${file.mimetype}`);
+      return NextResponse.json({ error: 'Invalid file type processed' }, { status: 400 });
     }
 
     return NextResponse.json({
       url: fileUrl,
       type: mediaType,
     });
-  } catch (error) {
-    console.error('Upload error:', error);
+  } catch (error: any) {
+    console.error('Upload endpoint error:', error);
+    // Check if it's the formidable file size error
+    if (error?.code === 'LIMIT_FILE_SIZE') {
+      console.error('Caught formidable LIMIT_FILE_SIZE error specifically.');
+      return NextResponse.json(
+        // Use a distinct message to confirm this block is hit
+        { message: `Formidable Error: File size limit exceeded (code: ${error.code}).` },
+        { status: 413 } // Payload Too Large
+      );
+    }
+    // Handle other errors
     return NextResponse.json(
-      { error: 'Failed to upload file' },
-      { status: 500 }
+      { error: error.message || 'Failed to upload file' },
+      { status: error.code === 'ENOENT' ? 400 : 500 } // Handle file not found potentially during rename
     );
   }
-}
-
-// Helper function to read file contents
-async function readFile(filepath: string): Promise<Buffer> {
-  const chunks = [];
-  for await (const chunk of require('fs').createReadStream(filepath)) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
 }

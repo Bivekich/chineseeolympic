@@ -3,10 +3,32 @@ import { createId } from '@paralleldrive/cuid2';
 import fs from 'fs';
 import path from 'path';
 
+// --- Font Setup ---
+const FONT_REGULAR_PATH = path.join(process.cwd(), 'public', 'fonts', 'DejaVuSans.ttf');
+const FONT_REGULAR_NAME = 'DejaVuSans'; 
+
+// Load font buffer once when the module loads
+let fontBuffer: Buffer | null = null;
+try {
+    if (fs.existsSync(FONT_REGULAR_PATH)) {
+        fontBuffer = fs.readFileSync(FONT_REGULAR_PATH);
+        console.log(`[certificates.ts] Font buffer loaded successfully from ${FONT_REGULAR_PATH}`);
+    } else {
+        console.error(`[certificates.ts] Font file NOT FOUND at ${FONT_REGULAR_PATH}. PDF generation will likely fail.`);
+    }
+} catch (err) {
+    console.error(`[certificates.ts] Error reading font file at ${FONT_REGULAR_PATH}:`, err);
+}
+// --- End Font Setup ---
+
 interface GenerateCertificateParams {
   userName: string;
   olympiadTitle: string;
+  olympiadDescription?: string;
+  difficulty?: string;
+  score?: string;
   place?: string;
+  date?: string;
 }
 
 // Новый тип диплома с различными вариантами для победителей и участников
@@ -20,16 +42,24 @@ export enum DiplomaType {
 export async function generateCertificate({
   userName,
   olympiadTitle,
+  olympiadDescription,
+  difficulty,
+  score,
   place,
+  date = new Date().toLocaleDateString(),
 }: GenerateCertificateParams): Promise<string> {
   // Определяем тип диплома на основе места
   const diplomaType = getDiplomaType(place);
 
-  // Используем обновленную функцию для создания диплома
+  // Используем обновленную функцию для создания диплома, передавая все параметры
   return generateDiploma({
     userName,
     olympiadTitle,
+    olympiadDescription,
+    difficulty,
+    score,
     place,
+    date,
     diplomaType,
   });
 }
@@ -56,378 +86,335 @@ interface GenerateDiplomaParams extends GenerateCertificateParams {
 async function generateDiploma({
   userName,
   olympiadTitle,
+  olympiadDescription,
+  difficulty,
+  score,
   place,
+  date,
   diplomaType,
 }: GenerateDiplomaParams): Promise<string> {
+    
+  if (!fontBuffer) {
+      console.error("[generateDiploma] Font buffer is not available. Cannot generate PDF.");
+      throw new Error("Font buffer failed to load, unable to generate certificate.");
+  }
+    
+  console.log("[generateDiploma] Creating PDFDocument instance with autoFirstPage: false...");
   const doc = new PDFDocument({
     size: 'A4',
     layout: 'landscape',
     margin: 0,
+    autoFirstPage: false, // Set autoFirstPage to false
   });
+  console.log("[generateDiploma] PDFDocument instance created.");
 
-  // Create certificates directory if it doesn't exist
+  // --- Register Font using Buffer --- 
+  try {
+      console.log(`[generateDiploma] Registering font '${FONT_REGULAR_NAME}' from buffer...`);
+      doc.registerFont(FONT_REGULAR_NAME, fontBuffer); 
+      console.log(`[generateDiploma] Registered font '${FONT_REGULAR_NAME}' successfully.`);
+      
+      console.log(`[generateDiploma] Setting default font to '${FONT_REGULAR_NAME}'...`);
+      doc.font(FONT_REGULAR_NAME); 
+      console.log(`[generateDiploma] Default font set successfully.`);
+
+  } catch (fontError) {
+      console.error('[generateDiploma] Error registering font from buffer:', fontError);
+      throw new Error('Failed to register font buffer for PDF generation.');
+  }
+  // --- End Register Font ---
+  
+  // --- Manually add the first page --- 
+  console.log("[generateDiploma] Manually adding the first page...");
+  doc.addPage();
+  console.log("[generateDiploma] First page added.");
+  // --- End Manually add page ---
+
   const certificatesDir = path.join(process.cwd(), 'public', 'certificates');
   if (!fs.existsSync(certificatesDir)) {
+    console.log(`[generateDiploma] Creating certificates directory: ${certificatesDir}`);
     fs.mkdirSync(certificatesDir, { recursive: true });
   }
 
-  // Generate certificate file path
   const certificateId = createId();
   const fileName = `${certificateId}.pdf`;
   const filePath = path.join(certificatesDir, fileName);
+  
+  console.log(`[generateDiploma] Setting up write stream for: ${filePath}`);
   const writeStream = fs.createWriteStream(filePath);
 
-  // Pipe the PDF to the file
   doc.pipe(writeStream);
 
-  // Добавляем фон в стиле сайта
-  addBackground(doc, diplomaType);
-
-  // Добавляем содержимое по типу диплома
-  switch (diplomaType) {
-    case DiplomaType.FIRST_PLACE:
-      addFirstPlaceDiploma(doc, userName, olympiadTitle);
-      break;
-    case DiplomaType.SECOND_PLACE:
-      addSecondPlaceDiploma(doc, userName, olympiadTitle);
-      break;
-    case DiplomaType.THIRD_PLACE:
-      addThirdPlaceDiploma(doc, userName, olympiadTitle);
-      break;
-    default:
-      addParticipantDiploma(doc, userName, olympiadTitle);
-      break;
+  // Add background and content
+  try {
+      doc.font(FONT_REGULAR_NAME); // Ensure font is set
+      addBackground(doc, diplomaType);
+      
+      // Call the combined content function
+      console.log(`[generateDiploma] Adding combined content for type: ${diplomaType}`);
+      addDiplomaContent(doc, diplomaType, userName, olympiadTitle, score, difficulty, olympiadDescription);
+      console.log(`[generateDiploma] Combined content added.`);
+      
+      console.log(`[generateDiploma] Adding signature and date...`);
+      addSignatureAndDate(doc, certificateId);
+      console.log(`[generateDiploma] Signature and date added.`);
+      
+  } catch (contentError) {
+      console.error(`[generateDiploma] Error during PDF content generation for ${filePath}:`, contentError);
+      // Clean up potentially broken stream/file?
+      try { writeStream.end(); fs.unlinkSync(filePath); } catch (cleanupErr) {/* ignore */} 
+      throw contentError; // Re-throw error to prevent proceeding
   }
 
-  // Добавляем дату и подпись
-  addDateAndSignature(doc);
+  // --- Modified Error Handling/Waiting Logic --- 
+  return new Promise<string>((resolve, reject) => {
+    let streamError: Error | null = null;
 
-  // Finalize the PDF
-  doc.end();
+    writeStream.on('finish', () => {
+      if (streamError) {
+        // If an error occurred *before* finish, reject
+        console.error(`[generateDiploma] writeStream finished, but error was previously caught for ${filePath}. Rejecting.`);
+        reject(streamError);
+      } else {
+        console.log(`[generateDiploma] Successfully finished writing certificate: ${filePath}`);
+        resolve(`/certificates/${fileName}`);
+      }
+    });
 
-  // Wait for the file to be written
-  await new Promise<void>((resolve) => writeStream.on('finish', resolve));
+    writeStream.on('error', (err) => {
+      console.error(`[generateDiploma] writeStream ERROR event for ${filePath}:`, err);
+      streamError = err; // Store error
+      // Don't reject immediately, let 'finish' handle it or timeout below
+      // Attempt to clean up broken file
+      try { fs.unlinkSync(filePath); } catch (cleanupErr) {/* ignore */} 
+      reject(err); // Reject immediately on stream error now
+    });
 
-  // Return the URL
-  return `/certificates/${fileName}`;
+    // Finalize the PDF document. This triggers the writing process.
+    console.log(`[generateDiploma] Calling doc.end() for ${filePath}`);
+    doc.end();
+    
+    // Optional: Add a timeout in case 'finish' or 'error' never fires
+    const timeoutMs = 15000; // 15 seconds timeout
+    const timeout = setTimeout(() => {
+        console.error(`[generateDiploma] Timeout (${timeoutMs}ms) waiting for writeStream finish/error for ${filePath}.`);
+        // Attempt cleanup
+        try { writeStream.end(); fs.unlinkSync(filePath); } catch (cleanupErr) {/* ignore */} 
+        reject(new Error(`Timeout waiting for PDF generation for ${filePath}`));
+    }, timeoutMs);
+
+    // Ensure timeout is cleared if finish/error occurs
+    writeStream.on('finish', () => clearTimeout(timeout));
+    writeStream.on('error', () => clearTimeout(timeout)); 
+
+  });
 }
 
 function addBackground(doc: PDFKit.PDFDocument, diplomaType: DiplomaType) {
-  // Создаем градиентный фон в стиле сайта
   const width = doc.page.width;
   const height = doc.page.height;
-
-  // Основной градиент фона
-  const gradient = doc.linearGradient(0, 0, width, height);
-
-  // Используем цвета из globals.css
-  gradient.stop(0, '#7f1d1d'); // --background-start-rgb
-  gradient.stop(1, '#991b1b'); // --background-end-rgb
-
-  doc.rect(0, 0, width, height);
-  doc.fill(gradient);
-
-  // Добавляем полупрозрачный узор
-  doc.save();
-  doc.fill('white');
-  doc.opacity(0.05);
-
-  // Простой декоративный узор
-  const patternSize = 30;
-  for (let x = 0; x < width; x += patternSize) {
-    for (let y = 0; y < height; y += patternSize) {
-      if ((x + y) % (patternSize * 2) === 0) {
-        doc.circle(x, y, 5).fill();
-      }
-    }
-  }
-
-  doc.restore();
-
-  // Декоративная рамка для диплома
-  doc.save();
-  doc.strokeColor('white');
-  doc.opacity(0.3);
-  doc.lineWidth(10);
-  doc.roundedRect(30, 30, width - 60, height - 60, 10);
-  doc.stroke();
-  doc.restore();
-
-  // Для победителей добавляем дополнительные элементы
-  if (diplomaType !== DiplomaType.PARTICIPANT) {
+  
+  // Base white background
+  doc.rect(0, 0, width, height).fill('#FFFFFF');
+  
+  // Add elegant blue and gold geometric border pattern
+  const borderWidth = 40;
+  const borderColor = '#C41E3A'; // Changed from blue to red
+  
+  // Use chinese-pattern.png as background if available
+  const patternPath = path.join(process.cwd(), 'public', 'chinese-pattern.png');
+  if (fs.existsSync(patternPath)) {
+    // Add pattern image in the background without using the unsupported opacity property
     doc.save();
-    doc.fill('white');
-    doc.opacity(0.2);
-
-    // Угловые декоративные элементы для победителей
-    const cornerSize = 80;
-    // Верхний левый угол
-    doc.circle(30, 30, cornerSize / 2).fill();
-    // Верхний правый угол
-    doc.circle(width - 30, 30, cornerSize / 2).fill();
-    // Нижний левый угол
-    doc.circle(30, height - 30, cornerSize / 2).fill();
-    // Нижний правый угол
-    doc.circle(width - 30, height - 30, cornerSize / 2).fill();
-
+    doc.fillOpacity(0.15); // Set global opacity before drawing the image
+    doc.image(patternPath, 0, 0, { 
+      width: width,
+      height: height
+    });
+    doc.fillOpacity(1.0); // Reset opacity
     doc.restore();
   }
+  
+  // Add red border rectangles (changed from blue)
+  doc.rect(0, 0, width, borderWidth).fill(borderColor);
+  doc.rect(0, height - borderWidth, width, borderWidth).fill(borderColor);
+  doc.rect(0, 0, borderWidth, height).fill(borderColor);
+  doc.rect(width - borderWidth, 0, borderWidth, height).fill(borderColor);
+  
+  // Gold accents at corners
+  const cornerSize = 60;
+  
+  // Top left corner decoration
+  doc.save();
+  doc.polygon(
+    [0, 0],
+    [cornerSize, 0],
+    [0, cornerSize]
+  ).fill('#D4AF37'); // Gold
+  
+  // Top right corner decoration
+  doc.polygon(
+    [width, 0],
+    [width - cornerSize, 0],
+    [width, cornerSize]
+  ).fill('#D4AF37'); // Gold
+  
+  // Bottom left corner decoration
+  doc.polygon(
+    [0, height],
+    [cornerSize, height],
+    [0, height - cornerSize]
+  ).fill('#D4AF37'); // Gold
+  
+  // Bottom right corner decoration
+  doc.polygon(
+    [width, height],
+    [width - cornerSize, height],
+    [width, height - cornerSize]
+  ).fill('#D4AF37'); // Gold
+  
+  doc.restore();
 }
 
-function addFirstPlaceDiploma(
+function addDiplomaContent(
   doc: PDFKit.PDFDocument,
+  diplomaType: DiplomaType,
   userName: string,
-  olympiadTitle: string
+  olympiadTitle: string,
+  score?: string,
+  difficulty?: string,
+  olympiadDescription?: string
 ) {
-  // Заголовок диплома
-  doc.save();
-  doc.fill('white');
-  doc.fontSize(60);
-  doc.font('Helvetica-Bold');
-  doc.text('ДИПЛОМ', { align: 'center' });
-  doc.fontSize(40);
-  doc.text('I СТЕПЕНИ', { align: 'center' });
+  const width = doc.page.width;
+  const height = doc.page.height;
+  const contentX = 80; // Left margin
+  const contentWidth = width - contentX * 2;
+  let currentY = 80; // Starting Y position
+  const mainTextColor = '#333333'; // Dark Grey for text
+  const titleColor = '#1A5B8C'; // Blue for titles
+  const accentColor = '#D4AF37'; // Gold for accents
+  
+  // Main Title - ДИПЛОМ
+  doc.font(FONT_REGULAR_NAME).fillColor(titleColor);
+  doc.fontSize(48).text('ДИПЛОМ', contentX, currentY, { width: contentWidth, align: 'center' });
+  currentY += 60;
 
-  // Золотая печать для 1-го места
-  doc.save();
-  doc.fill('#FFD700');
-  doc.circle(doc.page.width / 2, 220, 30);
-  doc.fill();
+  // Sub Title based on diploma type
+  let subTitle = '';
+  switch (diplomaType) {
+    case DiplomaType.FIRST_PLACE: subTitle = 'Победителя I степени'; break;
+    case DiplomaType.SECOND_PLACE: subTitle = 'Победителя II степени'; break;
+    case DiplomaType.THIRD_PLACE: subTitle = 'Победителя III степени'; break;
+    case DiplomaType.PARTICIPANT: subTitle = 'Участника'; break;
+  }
+  
+  doc.fontSize(24).text(subTitle, contentX, currentY, { width: contentWidth, align: 'center' });
+  currentY += 30;
+  
+  // Olympiad organization line
+  doc.fontSize(16).fillColor(mainTextColor);
+  doc.text('Олимпиады по китайскому языку на платформе ChineseStar', contentX, currentY, { width: contentWidth, align: 'center' });
+  currentY += 50;
 
-  doc.fill('#7f1d1d');
-  doc.fontSize(16);
-  doc.font('Helvetica-Bold');
-  doc.text('1', doc.page.width / 2 - 5, 215);
-  doc.restore();
+  // Name introduction text
+  doc.fontSize(14).fillColor(mainTextColor);
+  doc.text('Настоящим награждается', contentX, currentY, { width: contentWidth, align: 'center' });
+  currentY += 30;
 
-  // Текст диплома
-  doc.moveDown(3);
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('Награждается', { align: 'center' });
-  doc.moveDown(0.5);
+  // User Name - Use the passed userName parameter
+  doc.fontSize(28).fillColor(accentColor);
+  doc.text(userName, contentX, currentY, { width: contentWidth, align: 'center' });
+  currentY += 40;
 
-  doc.fontSize(35);
-  doc.font('Helvetica-Bold');
-  doc.text(userName, { align: 'center' });
-  doc.moveDown(1);
+  // Position/School information with difficulty
+  doc.fontSize(16).fillColor(mainTextColor);
+  let difficultyText = "уровень " + (difficulty ? difficulty : '');
+  if (score) {
+    difficultyText += difficultyText ? ' · ' : '';
+    difficultyText += `баллы: ${score}`;
+  }
+  doc.text(difficultyText, contentX, currentY, { width: contentWidth, align: 'center' });
+  currentY += 25;
+  
 
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('занявший(ая) I место в олимпиаде', { align: 'center' });
-  doc.moveDown(0.5);
-
-  doc.fontSize(30);
-  doc.font('Helvetica-Bold');
-  doc.text(`"${olympiadTitle}"`, { align: 'center' });
-
-  // Китайский символ
-  doc.save();
-  doc.fill('white');
-  doc.opacity(0.1);
-  doc.fontSize(150);
-  doc.text('汉语', { align: 'center' });
-  doc.restore();
+  // Use provided olympiad title
+  doc.fontSize(16).fillColor(titleColor);
+  doc.text(olympiadTitle, contentX, currentY, { width: contentWidth, align: 'center' });
+  
+  // Add decorative line under title
+  const lineY = currentY + 30;
+  const lineWidth = 150;
+  doc.moveTo(width/2 - lineWidth/2, lineY)
+     .lineTo(width/2 + lineWidth/2, lineY)
+     .lineWidth(2)
+     .strokeColor(accentColor)
+     .stroke();
 }
 
-function addSecondPlaceDiploma(
-  doc: PDFKit.PDFDocument,
-  userName: string,
-  olympiadTitle: string
-) {
-  // Заголовок диплома
-  doc.save();
-  doc.fill('white');
-  doc.fontSize(60);
-  doc.font('Helvetica-Bold');
-  doc.text('ДИПЛОМ', { align: 'center' });
-  doc.fontSize(40);
-  doc.text('II СТЕПЕНИ', { align: 'center' });
+function addSignatureAndDate(doc: PDFKit.PDFDocument, id?: string) {
+  const width = doc.page.width;
+  const height = doc.page.height;
+  
+  // Bottom section positioning
+  const bottomY = height - 150; // Position for the bottom section elements
 
-  // Серебряная печать для 2-го места
-  doc.save();
-  doc.fill('#C0C0C0');
-  doc.circle(doc.page.width / 2, 220, 30);
-  doc.fill();
-
-  doc.fill('#7f1d1d');
-  doc.fontSize(16);
-  doc.font('Helvetica-Bold');
-  doc.text('2', doc.page.width / 2 - 5, 215);
-  doc.restore();
-
-  // Текст диплома
-  doc.moveDown(3);
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('Награждается', { align: 'center' });
-  doc.moveDown(0.5);
-
-  doc.fontSize(35);
-  doc.font('Helvetica-Bold');
-  doc.text(userName, { align: 'center' });
-  doc.moveDown(1);
-
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('занявший(ая) II место в олимпиаде', { align: 'center' });
-  doc.moveDown(0.5);
-
-  doc.fontSize(30);
-  doc.font('Helvetica-Bold');
-  doc.text(`"${olympiadTitle}"`, { align: 'center' });
-
-  // Китайский символ
-  doc.save();
-  doc.fill('white');
-  doc.opacity(0.1);
-  doc.fontSize(150);
-  doc.text('汉语', { align: 'center' });
-  doc.restore();
-}
-
-function addThirdPlaceDiploma(
-  doc: PDFKit.PDFDocument,
-  userName: string,
-  olympiadTitle: string
-) {
-  // Заголовок диплома
-  doc.save();
-  doc.fill('white');
-  doc.fontSize(60);
-  doc.font('Helvetica-Bold');
-  doc.text('ДИПЛОМ', { align: 'center' });
-  doc.fontSize(40);
-  doc.text('III СТЕПЕНИ', { align: 'center' });
-
-  // Бронзовая печать для 3-го места
-  doc.save();
-  doc.fill('#CD7F32');
-  doc.circle(doc.page.width / 2, 220, 30);
-  doc.fill();
-
-  doc.fill('#7f1d1d');
-  doc.fontSize(16);
-  doc.font('Helvetica-Bold');
-  doc.text('3', doc.page.width / 2 - 5, 215);
-  doc.restore();
-
-  // Текст диплома
-  doc.moveDown(3);
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('Награждается', { align: 'center' });
-  doc.moveDown(0.5);
-
-  doc.fontSize(35);
-  doc.font('Helvetica-Bold');
-  doc.text(userName, { align: 'center' });
-  doc.moveDown(1);
-
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('занявший(ая) III место в олимпиаде', { align: 'center' });
-  doc.moveDown(0.5);
-
-  doc.fontSize(30);
-  doc.font('Helvetica-Bold');
-  doc.text(`"${olympiadTitle}"`, { align: 'center' });
-
-  // Китайский символ
-  doc.save();
-  doc.fill('white');
-  doc.opacity(0.1);
-  doc.fontSize(150);
-  doc.text('汉语', { align: 'center' });
-  doc.restore();
-}
-
-function addParticipantDiploma(
-  doc: PDFKit.PDFDocument,
-  userName: string,
-  olympiadTitle: string
-) {
-  // Заголовок диплома
-  doc.save();
-  doc.fill('white');
-  doc.fontSize(60);
-  doc.font('Helvetica-Bold');
-  doc.text('СЕРТИФИКАТ', { align: 'center' });
-  doc.fontSize(40);
-  doc.text('УЧАСТНИКА', { align: 'center' });
-
-  // Текст диплома
-  doc.moveDown(3);
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('Настоящим удостоверяется, что', { align: 'center' });
-  doc.moveDown(0.5);
-
-  doc.fontSize(35);
-  doc.font('Helvetica-Bold');
-  doc.text(userName, { align: 'center' });
-  doc.moveDown(1);
-
-  doc.fontSize(25);
-  doc.font('Helvetica');
-  doc.text('принял(а) участие в олимпиаде', { align: 'center' });
-  doc.moveDown(0.5);
-
-  doc.fontSize(30);
-  doc.font('Helvetica-Bold');
-  doc.text(`"${olympiadTitle}"`, { align: 'center' });
-
-  // Китайский символ
-  doc.save();
-  doc.fill('white');
-  doc.opacity(0.1);
-  doc.fontSize(150);
-  doc.text('汉语', { align: 'center' });
-  doc.restore();
-}
-
-function addDateAndSignature(doc: PDFKit.PDFDocument) {
-  const now = new Date();
-  const formattedDate = now.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-
-  doc.save();
-  doc.fill('white');
-  doc.fontSize(15);
-  doc.font('Helvetica');
-
-  // Дата
-  doc.text(
-    `Дата: ${formattedDate}`,
-    doc.page.width - 200,
-    doc.page.height - 100,
-    { align: 'right' }
-  );
-
-  // Добавляем изображение подписи
+  // Bottom left section - Stamp
+  const stampPath = path.join(process.cwd(), 'public', 'stamps', 'stamp.png');
+  const stampSize = 80;
+  if (fs.existsSync(stampPath)) {
+    console.log(`[addSignatureAndDate] Adding stamp from ${stampPath}`);
+    // Position stamp on the left side
+    doc.image(stampPath, width / 3 - stampSize / 3, bottomY - 20, {
+      width: stampSize
+    });
+  } else {
+    // Draw a placeholder circular stamp if no image
+    doc.save();
+    doc.circle(width / 3, bottomY, 40)
+      .lineWidth(2)
+      .fillOpacity(0.1)
+      .fillColor('#1A5B8C')
+      .fill()
+      .strokeColor('#1A5B8C')
+      .stroke();
+    doc.fillOpacity(1).fillColor('#1A5B8C');
+    doc.fontSize(10);
+    doc.text('ПЕЧАТЬ', width / 3 - 20, bottomY - 4);
+    doc.restore();
+  }
+  
+  // Bottom right section - Тришкина name and signature
+  doc.fontSize(14).fillColor('#333333');
+  // Position name on the right side
+  doc.text('Тришкина Екатерина Васильевна', width * 2/3, bottomY, { width: 200, align: 'center' });
+  
+  // Add signature image UNDER the name on the right
   const signPath = path.join(process.cwd(), 'public', 'sign.png');
-  doc.image(signPath, doc.page.width - 280, doc.page.height - 100, {
-    width: 150,
-    align: 'right',
-  });
-
-  // Текст подписи
-  doc.fontSize(12);
-  doc.opacity(1);
-  doc.text('Подпись организатора', doc.page.width - 200, doc.page.height - 50, {
-    align: 'right',
-  });
-  doc.restore();
-
-  // Добавляем штамп вместо QR-кода
-  doc.save();
-  const printPath = path.join(process.cwd(), 'public', 'print.png');
-  doc.opacity(0.9);
-  doc.image(printPath, 60, doc.page.height - 130, {
-    width: 100,
-  });
-  doc.restore();
+  if (fs.existsSync(signPath)) {
+    console.log(`[addSignatureAndDate] Adding signature from ${signPath}`);
+    // Position signature BELOW the name on the right
+    doc.image(signPath, width * 2/3 + 50, bottomY + 25, { 
+      width: 80
+    });
+  }
+  
+  // Date on the bottom left
+  const date = new Date();
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const formattedDate = `${day}.${month}.${year}`;
+  
+  doc.fontSize(12).fillColor('#333333'); // Darker color for better visibility
+  doc.text(`Дата: ${formattedDate}`, 80, height - 55);
+  
+  // Certificate ID at the bottom left below the date
+  if (id) {
+    doc.fontSize(10).fillColor('#333333'); // Darker color for better visibility 
+    doc.text(`ID: ${id}`, 80, height - 30);
+  }
+  
+  // URL at the bottom right
+  doc.fontSize(12).fillColor('#1A5B8C'); // Blue color for better visibility
+  doc.text('www.chinesestar.ru', width - 160, height - 55);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ChineseLoader from '@/components/ChineseLoader';
 
@@ -142,6 +142,7 @@ export default function ManageOlympiadPage({
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEndingOlympiad, setIsEndingOlympiad] = useState(false);
+  const [isReopeningOlympiad, setIsReopeningOlympiad] = useState(false);
   const [selectedParticipant, setSelectedParticipant] =
     useState<Participant | null>(null);
   const [isPromoCodeModalOpen, setIsPromoCodeModalOpen] = useState(false);
@@ -152,51 +153,52 @@ export default function ManageOlympiadPage({
     'participants'
   );
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [
-          olympiadResponse,
-          participantsResponse,
-          questionsResponse,
-          prizesResponse,
-        ] = await Promise.all([
-          fetch(`/api/olympiads/${params.id}`),
-          fetch(`/api/olympiads/${params.id}/participants`),
-          fetch(`/api/olympiads/${params.id}/questions`),
-          fetch(`/api/olympiads/${params.id}/prizes`),
-        ]);
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [
+        olympiadResponse,
+        participantsResponse,
+        questionsResponse,
+        prizesResponse,
+      ] = await Promise.all([
+        fetch(`/api/olympiads/${params.id}`),
+        fetch(`/api/olympiads/${params.id}/participants`),
+        fetch(`/api/olympiads/${params.id}/questions`),
+        fetch(`/api/olympiads/${params.id}/prizes`),
+      ]);
 
-        if (!olympiadResponse.ok) {
-          throw new Error('Failed to fetch olympiad');
-        }
-
-        const olympiadData = await olympiadResponse.json();
-        setOlympiad(olympiadData[0]);
-
-        if (participantsResponse.ok) {
-          const participantsData = await participantsResponse.json();
-          setParticipants(participantsData.participants);
-        }
-
-        if (questionsResponse.ok) {
-          const questionsData = await questionsResponse.json();
-          setQuestions(questionsData);
-        }
-
-        if (prizesResponse.ok) {
-          const prizesData = await prizesResponse.json();
-          setPrizes(prizesData);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
+      if (!olympiadResponse.ok) {
+        throw new Error('Failed to fetch olympiad');
       }
-    };
 
-    fetchData();
+      const olympiadData = await olympiadResponse.json();
+      setOlympiad(olympiadData[0]);
+
+      if (participantsResponse.ok) {
+        const participantsData = await participantsResponse.json();
+        setParticipants(participantsData.participants);
+      }
+
+      if (questionsResponse.ok) {
+        const questionsData = await questionsResponse.json();
+        setQuestions(questionsData);
+      }
+
+      if (prizesResponse.ok) {
+        const prizesData = await prizesResponse.json();
+        setPrizes(prizesData);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [params.id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleEndOlympiad = async () => {
     if (
@@ -217,12 +219,45 @@ export default function ManageOlympiadPage({
         throw new Error('Failed to end olympiad');
       }
 
+      await fetchData();
       router.push('/dashboard');
     } catch (error) {
       console.error('Error ending olympiad:', error);
       alert('Ошибка при завершении олимпиады');
     } finally {
       setIsEndingOlympiad(false);
+    }
+  };
+
+  const handleReopenOlympiad = async () => {
+    if (
+      !confirm(
+        'Вы уверены, что хотите снова открыть эту олимпиаду? Это действие нельзя отменить.'
+      )
+    ) {
+      return;
+    }
+
+    setIsReopeningOlympiad(true);
+    try {
+      const response = await fetch(`/api/olympiads/${params.id}/reopen`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to reopen olympiad');
+      }
+
+      alert('Олимпиада успешно открыта!');
+      await fetchData();
+    } catch (error) {
+      console.error('Error reopening olympiad:', error);
+      alert(
+        error instanceof Error ? error.message : 'Ошибка при открытии олимпиады'
+      );
+    } finally {
+      setIsReopeningOlympiad(false);
     }
   };
 
@@ -390,8 +425,15 @@ export default function ManageOlympiadPage({
                         parseInt(participant.place) <= 3 && (
                           <button
                             onClick={() => handleSendPrize(participant)}
-                            disabled={sendingPrizeForId === participant.id}
-                            className="px-3 py-1 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                            disabled={sendingPrizeForId === participant.id || !olympiad.isCompleted}
+                            className={`px-3 py-1 text-sm font-medium text-white rounded-lg transition-colors 
+                              ${
+                                !olympiad.isCompleted 
+                                ? 'bg-gray-500 cursor-not-allowed' 
+                                : 'bg-red-700 hover:bg-red-600'
+                              } 
+                              disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={!olympiad.isCompleted ? "Завершите олимпиаду, чтобы отправить призы" : sendingPrizeForId === participant.id ? "Отправка..." : "Отправить приз"}
                           >
                             {sendingPrizeForId === participant.id
                               ? 'Отправка...'
@@ -569,10 +611,34 @@ export default function ManageOlympiadPage({
                   )}
                 </div>
               </div>
+
+              {/* Actions */}
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-red-200/10 p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Действия</h3>
+                <div className="flex flex-col md:flex-row gap-4">
+                  {olympiad.isCompleted ? (
+                    <button
+                      onClick={handleReopenOlympiad}
+                      disabled={isReopeningOlympiad}
+                      className="px-6 py-3 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-500 transition-colors disabled:opacity-50 flex-1"
+                    >
+                      {isReopeningOlympiad ? 'Открытие...' : 'Снова открыть олимпиаду'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleEndOlympiad}
+                      disabled={isEndingOlympiad}
+                      className="px-6 py-3 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex-1"
+                    >
+                      {isEndingOlympiad ? 'Завершение...' : 'Завершить олимпиаду'}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Actions */}
+          {/* Navigation Buttons (kept separate if desired) */}
           <div className="flex justify-between items-center mt-6">
             <div className="flex space-x-3">
               <button
@@ -583,20 +649,16 @@ export default function ManageOlympiadPage({
               </button>
               <button
                 onClick={() => router.push(`/olympiads/${params.id}/edit`)}
-                className="px-6 py-3 text-sm font-medium text-yellow-200 bg-red-950/50 border border-yellow-200/20 rounded-lg hover:bg-red-900/50 transition-colors"
+                className={`px-6 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  olympiad.isCompleted
+                    ? 'text-gray-400 bg-gray-700/30 border border-gray-600/20 cursor-not-allowed'
+                    : 'text-yellow-200 bg-red-950/50 border border-yellow-200/20 hover:bg-red-900/50'
+                }`}
+                disabled={olympiad.isCompleted}
               >
                 Редактировать
               </button>
             </div>
-            {!olympiad.isCompleted && (
-              <button
-                onClick={handleEndOlympiad}
-                disabled={isEndingOlympiad}
-                className="px-6 py-3 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-              >
-                {isEndingOlympiad ? 'Завершение...' : 'Завершить олимпиаду'}
-              </button>
-            )}
           </div>
         </div>
       </div>
