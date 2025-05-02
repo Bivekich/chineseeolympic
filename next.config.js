@@ -5,7 +5,9 @@ const fs = require('fs');
 const ensureDirectories = () => {
   const dirs = [
     path.join(process.cwd(), 'public', 'olympiad-media'),
+    path.join(process.cwd(), 'public', 'static', 'olympiad-media'),
     path.join(process.cwd(), 'public', 'certificates'),
+    path.join(process.cwd(), 'public', 'uploads', 'olympiad-media'),
   ];
 
   dirs.forEach((dir) => {
@@ -40,6 +42,15 @@ const nextConfig = {
     return [
       {
         source: '/olympiad-media/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/static/olympiad-media/:path*',
         headers: [
           {
             key: 'Cache-Control',

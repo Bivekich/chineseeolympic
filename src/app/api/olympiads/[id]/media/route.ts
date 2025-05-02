@@ -9,37 +9,15 @@ import path from 'path';
 import { writeFile, mkdir } from 'fs/promises';
 
 // Create uploads directory if it doesn't exist
-const mediaDir = path.join(process.cwd(), 'public', 'olympiad-media');
+const mediaDir = path.join(process.cwd(), 'public', 'static', 'olympiad-media');
 
 // Вспомогательная функция для проверки и создания директории
 async function ensureDirectoryExists(dirPath: string) {
   try {
-    if (!fs.existsSync(dirPath)) {
-      console.log(`[media/route] Creating directory: ${dirPath}`);
-      await mkdir(dirPath, { recursive: true });
-      console.log(`[media/route] Directory created: ${dirPath}`);
-    } else {
-      console.log(`[media/route] Directory already exists: ${dirPath}`);
-    }
-
-    // Проверка прав доступа
-    try {
-      const testFile = path.join(dirPath, `.test-${Date.now()}.tmp`);
-      await writeFile(testFile, 'test');
-      fs.unlinkSync(testFile);
-      console.log(`[media/route] Directory is writable: ${dirPath}`);
-    } catch (error) {
-      console.error(
-        `[media/route] Directory is NOT writable: ${dirPath}`,
-        error
-      );
-      return false;
-    }
-
-    return true;
+    await mkdir(dirPath, { recursive: true });
   } catch (error) {
-    console.error(`[media/route] Error creating directory: ${dirPath}`, error);
-    return false;
+    console.error('Error creating directory:', error);
+    throw new Error('Failed to create directory');
   }
 }
 
@@ -51,13 +29,7 @@ export async function POST(
 
   try {
     // Ensure media directory exists
-    const dirExists = await ensureDirectoryExists(mediaDir);
-    if (!dirExists) {
-      return NextResponse.json(
-        { message: 'Failed to create media directory' },
-        { status: 500 }
-      );
-    }
+    await ensureDirectoryExists(mediaDir);
 
     const userId = await verifyAuth();
     if (!userId) {
@@ -150,7 +122,7 @@ export async function POST(
     }
 
     // Return the file URL and type
-    const fileUrl = `/olympiad-media/${uniqueFilename}`;
+    const fileUrl = `/static/olympiad-media/${uniqueFilename}`;
     console.log(`[media/route] Generated file URL: ${fileUrl}`);
     return NextResponse.json({
       url: fileUrl,

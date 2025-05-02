@@ -12,8 +12,18 @@ const FONT_REGULAR_PATH = path.join(
 );
 const FONT_REGULAR_NAME = 'DejaVuSans';
 
+const FONT_CHINESE_PATH = path.join(
+  process.cwd(),
+  'public',
+  'fonts',
+  'NotoSansSC-Regular.otf'
+);
+const FONT_CHINESE_NAME = 'NotoSansSC';
+
 // Load font buffer once when the module loads
 let fontBuffer: Buffer | null = null;
+let fontChineseBuffer: Buffer | null = null;
+
 try {
   if (fs.existsSync(FONT_REGULAR_PATH)) {
     fontBuffer = fs.readFileSync(FONT_REGULAR_PATH);
@@ -25,11 +35,19 @@ try {
       `[certificates.ts] Font file NOT FOUND at ${FONT_REGULAR_PATH}. PDF generation will likely fail.`
     );
   }
+
+  if (fs.existsSync(FONT_CHINESE_PATH)) {
+    fontChineseBuffer = fs.readFileSync(FONT_CHINESE_PATH);
+    console.log(
+      `[certificates.ts] Chinese font buffer loaded successfully from ${FONT_CHINESE_PATH}`
+    );
+  } else {
+    console.error(
+      `[certificates.ts] Chinese font file NOT FOUND at ${FONT_CHINESE_PATH}. Chinese characters may not display correctly.`
+    );
+  }
 } catch (err) {
-  console.error(
-    `[certificates.ts] Error reading font file at ${FONT_REGULAR_PATH}:`,
-    err
-  );
+  console.error(`[certificates.ts] Error reading font files:`, err);
 }
 // --- End Font Setup ---
 
@@ -134,6 +152,16 @@ async function generateDiploma({
     console.log(
       `[generateDiploma] Registered font '${FONT_REGULAR_NAME}' successfully.`
     );
+
+    if (fontChineseBuffer) {
+      console.log(
+        `[generateDiploma] Registering Chinese font '${FONT_CHINESE_NAME}' from buffer...`
+      );
+      doc.registerFont(FONT_CHINESE_NAME, fontChineseBuffer);
+      console.log(
+        `[generateDiploma] Registered Chinese font '${FONT_CHINESE_NAME}' successfully.`
+      );
+    }
 
     console.log(
       `[generateDiploma] Setting default font to '${FONT_REGULAR_NAME}'...`
@@ -351,12 +379,10 @@ function addDiplomaContent(
 
   // Main Title - ДИПЛОМ
   doc.font(FONT_REGULAR_NAME).fillColor(titleColor);
-  doc
-    .fontSize(48)
-    .text('ДИПЛОМ', contentX, currentY, {
-      width: contentWidth,
-      align: 'center',
-    });
+  doc.fontSize(48).text('ДИПЛОМ', contentX, currentY, {
+    width: contentWidth,
+    align: 'center',
+  });
   currentY += 60;
 
   // Sub Title based on diploma type
@@ -376,22 +402,30 @@ function addDiplomaContent(
       break;
   }
 
-  doc
-    .fontSize(24)
-    .text(subTitle, contentX, currentY, {
-      width: contentWidth,
-      align: 'center',
-    });
+  doc.fontSize(24).text(subTitle, contentX, currentY, {
+    width: contentWidth,
+    align: 'center',
+  });
   currentY += 30;
 
   // Olympiad organization line
   doc.fontSize(16).fillColor(mainTextColor);
+
+  // Используем китайский шрифт для текста с китайскими символами
+  if (fontChineseBuffer && olympiadTitle.match(/[\u4E00-\u9FFF]/)) {
+    doc.font(FONT_CHINESE_NAME);
+  }
+
   doc.text(
     'Всероссийская открытая олимпиада по китайскому языку «汉语之星» - Китайская звезда',
     contentX,
     currentY,
     { width: contentWidth, align: 'center' }
   );
+
+  // Возвращаемся к основному шрифту
+  doc.font(FONT_REGULAR_NAME);
+
   currentY += 50;
 
   // Name introduction text
