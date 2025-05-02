@@ -250,14 +250,21 @@ export default function AddQuestionsPage({
     formData.append('questionIndex', questionIndex.toString());
 
     try {
-      console.log(`Uploading file for question ${questionIndex}: ${file.name}`);
+      console.log(
+        `Uploading file for question ${questionIndex}: ${file.name}, size: ${file.size} bytes, type: ${file.type}`
+      );
       const response = await fetch(`/api/olympiads/${params.id}/media`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload media');
+        const errorText = await response.text();
+        console.error(
+          `Upload error: ${response.status} ${response.statusText}`,
+          errorText
+        );
+        throw new Error(`Failed to upload media: ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -278,10 +285,16 @@ export default function AddQuestionsPage({
         },
       };
       setQuestions(newQuestions);
-      alert(`Файл ${file.name} успешно загружен`);
+      alert(`Файл ${file.name} успешно загружен.
+Путь: ${data.url}
+Тип: ${data.type}`);
     } catch (error) {
       console.error('Error uploading media:', error);
-      alert('Ошибка при загрузке медиафайла');
+      alert(
+        `Ошибка при загрузке медиафайла: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   };
 

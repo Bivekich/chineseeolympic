@@ -1,4 +1,28 @@
 const path = require('path');
+const fs = require('fs');
+
+// Убедимся, что директории для загрузки существуют
+const ensureDirectories = () => {
+  const dirs = [
+    path.join(process.cwd(), 'public', 'uploads'),
+    path.join(process.cwd(), 'public', 'uploads', 'olympiad-media'),
+    path.join(process.cwd(), 'public', 'certificates'),
+  ];
+
+  dirs.forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+      console.log(`Creating directory: ${dir}`);
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+};
+
+// Создать директории при запуске
+try {
+  ensureDirectories();
+} catch (error) {
+  console.error('Error creating directories:', error);
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -12,15 +36,31 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['pdfkit', 'fs'],
   },
+  // Добавляем обработку файлов в uploads
+  async headers() {
+    return [
+      {
+        source: '/uploads/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      const pdfkitDataDir = path.dirname(require.resolve('pdfkit/package.json'));
+      const pdfkitDataDir = path.dirname(
+        require.resolve('pdfkit/package.json')
+      );
       const sourceDataPath = path.join(pdfkitDataDir, 'js/data');
-      
+
       console.log(`[next.config.js] Found pdfkit data path: ${sourceDataPath}`);
 
       const CopyWebpackPlugin = require('copy-webpack-plugin');
-      
+
       config.plugins.push(
         new CopyWebpackPlugin({
           patterns: [
@@ -36,7 +76,9 @@ const nextConfig = {
         })
       );
 
-      console.log("[next.config.js] Added CopyWebpackPlugin for pdfkit .afm files.");
+      console.log(
+        '[next.config.js] Added CopyWebpackPlugin for pdfkit .afm files.'
+      );
     }
 
     config.module.rules.push({

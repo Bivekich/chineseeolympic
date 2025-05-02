@@ -511,43 +511,79 @@ export default function StartOlympiadPage({
                 {currentQuestion.media && currentQuestion.media.url && (
                   <div className="mb-6">
                     {currentQuestion.media.type === 'image' && (
-                      <img
-                        src={currentQuestion.media.url}
-                        alt="Question media"
-                        className="max-w-full max-h-[400px] rounded-lg object-contain mx-auto"
-                        onError={(e) => {
-                          console.error(
-                            `Failed to load image: ${currentQuestion.media?.url}`
-                          );
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
+                      <div>
+                        <img
+                          src={currentQuestion.media.url}
+                          alt="Question media"
+                          className="max-w-full max-h-[400px] rounded-lg object-contain mx-auto"
+                          onError={(e) => {
+                            console.error(
+                              `Failed to load image: ${currentQuestion.media?.url}`
+                            );
+                            // Показываем сообщение об ошибке вместо скрытия элемента
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className =
+                              'text-red-500 p-2 border border-red-300 rounded';
+                            errorDiv.textContent = `Не удалось загрузить изображение (${currentQuestion.media?.url})`;
+                            target.parentNode?.appendChild(errorDiv);
+                          }}
+                        />
+                        <div className="text-xs text-red-200/50 mt-1">
+                          URL: {currentQuestion.media.url}
+                        </div>
+                      </div>
                     )}
                     {currentQuestion.media.type === 'video' && (
-                      <video
-                        src={currentQuestion.media.url}
-                        controls
-                        className="max-w-full max-h-[400px] rounded-lg mx-auto"
-                        onError={(e) => {
-                          console.error(
-                            `Failed to load video: ${currentQuestion.media?.url}`
-                          );
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
+                      <div>
+                        <video
+                          src={currentQuestion.media.url}
+                          controls
+                          className="max-w-full max-h-[400px] rounded-lg mx-auto"
+                          onError={(e) => {
+                            console.error(
+                              `Failed to load video: ${currentQuestion.media?.url}`
+                            );
+                            // Показываем сообщение об ошибке вместо скрытия элемента
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className =
+                              'text-red-500 p-2 border border-red-300 rounded';
+                            errorDiv.textContent = `Не удалось загрузить видео (${currentQuestion.media?.url})`;
+                            target.parentNode?.appendChild(errorDiv);
+                          }}
+                        />
+                        <div className="text-xs text-red-200/50 mt-1">
+                          URL: {currentQuestion.media.url}
+                        </div>
+                      </div>
                     )}
                     {currentQuestion.media.type === 'audio' && (
-                      <audio
-                        src={currentQuestion.media.url}
-                        controls
-                        className="w-full"
-                        onError={(e) => {
-                          console.error(
-                            `Failed to load audio: ${currentQuestion.media?.url}`
-                          );
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
+                      <div>
+                        <audio
+                          src={currentQuestion.media.url}
+                          controls
+                          className="w-full"
+                          onError={(e) => {
+                            console.error(
+                              `Failed to load audio: ${currentQuestion.media?.url}`
+                            );
+                            // Показываем сообщение об ошибке вместо скрытия элемента
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className =
+                              'text-red-500 p-2 border border-red-300 rounded';
+                            errorDiv.textContent = `Не удалось загрузить аудио (${currentQuestion.media?.url})`;
+                            target.parentNode?.appendChild(errorDiv);
+                          }}
+                        />
+                        <div className="text-xs text-red-200/50 mt-1">
+                          URL: {currentQuestion.media.url}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

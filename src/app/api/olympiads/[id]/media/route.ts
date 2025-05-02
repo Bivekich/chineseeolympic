@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import fs from 'fs';
 import path from 'path';
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(
@@ -16,15 +16,62 @@ const uploadsDir = path.join(
   'olympiad-media'
 );
 
+// Вспомогательная функция для проверки и создания директории
+async function ensureDirectoryExists(dirPath: string) {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      console.log(`[media/route] Creating directory: ${dirPath}`);
+      await mkdir(dirPath, { recursive: true });
+      console.log(`[media/route] Directory created: ${dirPath}`);
+    } else {
+      console.log(`[media/route] Directory already exists: ${dirPath}`);
+    }
+
+    // Проверка прав доступа
+    try {
+      const testFile = path.join(dirPath, `.test-${Date.now()}.tmp`);
+      await writeFile(testFile, 'test');
+      fs.unlinkSync(testFile);
+      console.log(`[media/route] Directory is writable: ${dirPath}`);
+    } catch (error) {
+      console.error(
+        `[media/route] Directory is NOT writable: ${dirPath}`,
+        error
+      );
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`[media/route] Error creating directory: ${dirPath}`, error);
+    return false;
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  console.log(`[media/route] Starting file upload for olympiad ${params.id}`);
+
   try {
-    // Ensure uploads directory exists
-    if (!fs.existsSync(uploadsDir)) {
-      console.log(`Creating uploads directory: ${uploadsDir}`);
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    // Ensure uploads parent directory exists first
+    const parentDir = path.join(process.cwd(), 'public', 'uploads');
+    const parentExists = await ensureDirectoryExists(parentDir);
+    if (!parentExists) {
+      return NextResponse.json(
+        { message: 'Failed to create parent uploads directory' },
+        { status: 500 }
+      );
+    }
+
+    // Then ensure media subdirectory exists
+    const dirExists = await ensureDirectoryExists(uploadsDir);
+    if (!dirExists) {
+      return NextResponse.json(
+        { message: 'Failed to create uploads directory' },
+        { status: 500 }
+      );
     }
 
     const userId = await verifyAuth();
@@ -58,6 +105,10 @@ export async function POST(
       );
     }
 
+    console.log(
+      `[media/route] Received file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`
+    );
+
     // Validate file type
     const fileType = file.type;
     if (!fileType.match(/^(image|video|audio)\//)) {
@@ -76,9 +127,26 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    console.log(`Saving file to: ${filePath}`);
-    await writeFile(filePath, buffer);
-    console.log(`File saved successfully to: ${filePath}`);
+    console.log(`[media/route] Saving file to: ${filePath}`);
+    try {
+      await writeFile(filePath, buffer);
+      console.log(`[media/route] File saved successfully to: ${filePath}`);
+
+      // Verify file exists after saving
+      if (!fs.existsSync(filePath)) {
+        console.error(`[media/route] File was not saved properly: ${filePath}`);
+        return NextResponse.json(
+          { message: 'Failed to save file' },
+          { status: 500 }
+        );
+      }
+    } catch (error) {
+      console.error(`[media/route] Error saving file: ${filePath}`, error);
+      return NextResponse.json(
+        { message: 'Failed to save file' },
+        { status: 500 }
+      );
+    }
 
     // Determine media type
     let mediaType: 'image' | 'video' | 'audio';
@@ -98,13 +166,13 @@ export async function POST(
 
     // Return the file URL and type
     const fileUrl = `/uploads/olympiad-media/${uniqueFilename}`;
-    console.log(`Generated file URL: ${fileUrl}`);
+    console.log(`[media/route] Generated file URL: ${fileUrl}`);
     return NextResponse.json({
       url: fileUrl,
       type: mediaType,
     });
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('[media/route] Error uploading file:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
