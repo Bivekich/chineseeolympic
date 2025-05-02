@@ -4,22 +4,7 @@ import { db } from '@/lib/db';
 import { olympiads } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
-import fs from 'fs';
-import path from 'path';
-import { writeFile, mkdir } from 'fs/promises';
-
-// Create uploads directory if it doesn't exist
-const mediaDir = path.join(process.cwd(), 'public', 'static', 'olympiad-media');
-
-// Вспомогательная функция для проверки и создания директории
-async function ensureDirectoryExists(dirPath: string) {
-  try {
-    await mkdir(dirPath, { recursive: true });
-  } catch (error) {
-    console.error('Error creating directory:', error);
-    throw new Error('Failed to create directory');
-  }
-}
+import { uploadToS3 } from '@/lib/s3';
 
 export async function POST(
   request: NextRequest,
@@ -28,9 +13,6 @@ export async function POST(
   console.log(`[media/route] Starting file upload for olympiad ${params.id}`);
 
   try {
-    // Ensure media directory exists
-    await ensureDirectoryExists(mediaDir);
-
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -78,58 +60,54 @@ export async function POST(
     // Generate a unique filename
     const fileExtension = file.name.split('.').pop();
     const uniqueFilename = `${createId()}.${fileExtension}`;
-    const filePath = path.join(mediaDir, uniqueFilename);
 
-    // Convert File to Buffer and save
+    // Convert File to Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    console.log(`[media/route] Saving file to: ${filePath}`);
+    // Загружаем файл в S3 вместо локальной файловой системы
+    console.log(`[media/route] Uploading file to S3: ${uniqueFilename}`);
     try {
-      await writeFile(filePath, buffer);
-      console.log(`[media/route] File saved successfully to: ${filePath}`);
+      const fileUrl = await uploadToS3(
+        buffer,
+        uniqueFilename,
+        file.type,
+        'olympiad-media'
+      );
 
-      // Verify file exists after saving
-      if (!fs.existsSync(filePath)) {
-        console.error(`[media/route] File was not saved properly: ${filePath}`);
+      console.log(`[media/route] File uploaded to S3 successfully: ${fileUrl}`);
+
+      // Determine media type
+      let mediaType: 'image' | 'video' | 'audio';
+      if (fileType.startsWith('image/')) {
+        mediaType = 'image';
+      } else if (fileType.startsWith('video/')) {
+        mediaType = 'video';
+      } else if (fileType.startsWith('audio/')) {
+        mediaType = 'audio';
+      } else {
+        // This shouldn't happen due to earlier validation, but just in case
         return NextResponse.json(
-          { message: 'Failed to save file' },
-          { status: 500 }
+          { message: 'Invalid file type' },
+          { status: 400 }
         );
       }
-    } catch (error) {
-      console.error(`[media/route] Error saving file: ${filePath}`, error);
+
+      // Return the file URL and type
+      console.log(`[media/route] Generated file URL: ${fileUrl}`);
+      return NextResponse.json({
+        url: fileUrl,
+        type: mediaType,
+      });
+    } catch (uploadError) {
+      console.error('[media/route] Error uploading file to S3:', uploadError);
       return NextResponse.json(
-        { message: 'Failed to save file' },
+        { message: 'Failed to upload file to S3' },
         { status: 500 }
       );
     }
-
-    // Determine media type
-    let mediaType: 'image' | 'video' | 'audio';
-    if (fileType.startsWith('image/')) {
-      mediaType = 'image';
-    } else if (fileType.startsWith('video/')) {
-      mediaType = 'video';
-    } else if (fileType.startsWith('audio/')) {
-      mediaType = 'audio';
-    } else {
-      // This shouldn't happen due to earlier validation, but just in case
-      return NextResponse.json(
-        { message: 'Invalid file type' },
-        { status: 400 }
-      );
-    }
-
-    // Return the file URL and type
-    const fileUrl = `/static/olympiad-media/${uniqueFilename}`;
-    console.log(`[media/route] Generated file URL: ${fileUrl}`);
-    return NextResponse.json({
-      url: fileUrl,
-      type: mediaType,
-    });
   } catch (error) {
-    console.error('[media/route] Error uploading file:', error);
+    console.error('[media/route] Error processing upload:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

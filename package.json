@@ -10,9 +10,12 @@
     "db:generate": "drizzle-kit generate:pg",
     "db:push": "drizzle-kit push:pg",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit push:pg"
+    "db:migrate": "drizzle-kit push:pg",
+    "migrate-to-s3": "npx ts-node src/scripts/migrate-to-s3.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.800.0",
+    "@aws-sdk/s3-request-presigner": "^3.800.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "bcryptjs": "^2.4.3",
     "drizzle-orm": "^0.29.3",

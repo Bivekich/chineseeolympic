@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import { createId } from '@paralleldrive/cuid2';
 import fs from 'fs';
 import path from 'path';
+import { uploadToS3 } from './s3';
 
 // --- Font Setup ---
 const FONT_REGULAR_PATH = path.join(
@@ -183,22 +184,12 @@ async function generateDiploma({
   console.log('[generateDiploma] First page added.');
   // --- End Manually add page ---
 
-  const certificatesDir = path.join(process.cwd(), 'public', 'certificates');
-  if (!fs.existsSync(certificatesDir)) {
-    console.log(
-      `[generateDiploma] Creating certificates directory: ${certificatesDir}`
-    );
-    fs.mkdirSync(certificatesDir, { recursive: true });
-  }
-
   const certificateId = createId();
   const fileName = `${certificateId}.pdf`;
-  const filePath = path.join(certificatesDir, fileName);
 
-  console.log(`[generateDiploma] Setting up write stream for: ${filePath}`);
-  const writeStream = fs.createWriteStream(filePath);
-
-  doc.pipe(writeStream);
+  // Создаем буфер для сохранения PDF данных
+  const chunks: Buffer[] = [];
+  doc.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
 
   // Add background and content
   try {
@@ -225,77 +216,66 @@ async function generateDiploma({
     console.log(`[generateDiploma] Signature and date added.`);
   } catch (contentError) {
     console.error(
-      `[generateDiploma] Error during PDF content generation for ${filePath}:`,
+      `[generateDiploma] Error during PDF content generation:`,
       contentError
     );
-    // Clean up potentially broken stream/file?
-    try {
-      writeStream.end();
-      fs.unlinkSync(filePath);
-    } catch (cleanupErr) {
-      /* ignore */
-    }
     throw contentError; // Re-throw error to prevent proceeding
   }
 
   // --- Modified Error Handling/Waiting Logic ---
   return new Promise<string>((resolve, reject) => {
-    let streamError: Error | null = null;
+    // Когда PDF документ завершен
+    doc.on('end', async () => {
+      try {
+        // Объединяем все фрагменты в один буфер
+        const pdfBuffer = Buffer.concat(chunks);
 
-    writeStream.on('finish', () => {
-      if (streamError) {
-        // If an error occurred *before* finish, reject
-        console.error(
-          `[generateDiploma] writeStream finished, but error was previously caught for ${filePath}. Rejecting.`
-        );
-        reject(streamError);
-      } else {
+        // Загружаем PDF в S3
         console.log(
-          `[generateDiploma] Successfully finished writing certificate: ${filePath}`
+          `[generateDiploma] Uploading certificate to S3: ${fileName}`
         );
-        resolve(`/certificates/${fileName}`);
+        const s3Url = await uploadToS3(
+          pdfBuffer,
+          fileName,
+          'application/pdf',
+          'certificates'
+        );
+
+        console.log(
+          `[generateDiploma] Successfully uploaded certificate to S3: ${s3Url}`
+        );
+        resolve(s3Url);
+      } catch (error) {
+        console.error(
+          `[generateDiploma] Error uploading certificate to S3:`,
+          error
+        );
+        reject(error);
       }
     });
 
-    writeStream.on('error', (err) => {
-      console.error(
-        `[generateDiploma] writeStream ERROR event for ${filePath}:`,
-        err
-      );
-      streamError = err; // Store error
-      // Don't reject immediately, let 'finish' handle it or timeout below
-      // Attempt to clean up broken file
-      try {
-        fs.unlinkSync(filePath);
-      } catch (cleanupErr) {
-        /* ignore */
-      }
-      reject(err); // Reject immediately on stream error now
+    // В случае ошибки при создании PDF
+    doc.on('error', (err) => {
+      console.error(`[generateDiploma] PDF generation error:`, err);
+      reject(err);
     });
 
     // Finalize the PDF document. This triggers the writing process.
-    console.log(`[generateDiploma] Calling doc.end() for ${filePath}`);
+    console.log(`[generateDiploma] Calling doc.end() to finalize PDF`);
     doc.end();
 
-    // Optional: Add a timeout in case 'finish' or 'error' never fires
+    // Optional: Add a timeout in case 'end' or 'error' never fires
     const timeoutMs = 15000; // 15 seconds timeout
     const timeout = setTimeout(() => {
       console.error(
-        `[generateDiploma] Timeout (${timeoutMs}ms) waiting for writeStream finish/error for ${filePath}.`
+        `[generateDiploma] Timeout (${timeoutMs}ms) waiting for PDF generation.`
       );
-      // Attempt cleanup
-      try {
-        writeStream.end();
-        fs.unlinkSync(filePath);
-      } catch (cleanupErr) {
-        /* ignore */
-      }
-      reject(new Error(`Timeout waiting for PDF generation for ${filePath}`));
+      reject(new Error(`Timeout waiting for PDF generation`));
     }, timeoutMs);
 
     // Ensure timeout is cleared if finish/error occurs
-    writeStream.on('finish', () => clearTimeout(timeout));
-    writeStream.on('error', () => clearTimeout(timeout));
+    doc.on('end', () => clearTimeout(timeout));
+    doc.on('error', () => clearTimeout(timeout));
   });
 }
 
