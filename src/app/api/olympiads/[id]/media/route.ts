@@ -12,7 +12,7 @@ import { writeFile, mkdir } from 'fs/promises';
 const uploadsDir = path.join(
   process.cwd(),
   'public',
-  'uploads',
+  'static',
   'olympiad-media'
 );
 
@@ -127,21 +127,13 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    console.log(`[media/route] Saving file to: ${filePath}`);
-    try {
-      await writeFile(filePath, buffer);
-      console.log(`[media/route] File saved successfully to: ${filePath}`);
+    console.log(`Saving file to: ${filePath}`);
+    await writeFile(filePath, buffer);
+    console.log(`File saved successfully to: ${filePath}`);
 
-      // Verify file exists after saving
-      if (!fs.existsSync(filePath)) {
-        console.error(`[media/route] File was not saved properly: ${filePath}`);
-        return NextResponse.json(
-          { message: 'Failed to save file' },
-          { status: 500 }
-        );
-      }
-    } catch (error) {
-      console.error(`[media/route] Error saving file: ${filePath}`, error);
+    // Verify file exists after saving
+    if (!fs.existsSync(filePath)) {
+      console.error(`[media/route] File was not saved properly: ${filePath}`);
       return NextResponse.json(
         { message: 'Failed to save file' },
         { status: 500 }
@@ -165,8 +157,8 @@ export async function POST(
     }
 
     // Return the file URL and type
-    const fileUrl = `/uploads/olympiad-media/${uniqueFilename}`;
-    console.log(`[media/route] Generated file URL: ${fileUrl}`);
+    const fileUrl = `/static/olympiad-media/${uniqueFilename}`;
+    console.log(`Generated file URL: ${fileUrl}`);
     return NextResponse.json({
       url: fileUrl,
       type: mediaType,

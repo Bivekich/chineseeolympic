@@ -511,7 +511,7 @@ export default function StartOlympiadPage({
                 {currentQuestion.media && currentQuestion.media.url && (
                   <div className="mb-6">
                     {currentQuestion.media.type === 'image' && (
-                      <div>
+                      <div className="relative">
                         <img
                           src={currentQuestion.media.url}
                           alt="Question media"
@@ -520,19 +520,17 @@ export default function StartOlympiadPage({
                             console.error(
                               `Failed to load image: ${currentQuestion.media?.url}`
                             );
-                            // Показываем сообщение об ошибке вместо скрытия элемента
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className =
-                              'text-red-500 p-2 border border-red-300 rounded';
-                            errorDiv.textContent = `Не удалось загрузить изображение (${currentQuestion.media?.url})`;
-                            target.parentNode?.appendChild(errorDiv);
+                            const container = e.currentTarget.parentElement;
+                            if (container) {
+                              const errorMsg = document.createElement('div');
+                              errorMsg.className =
+                                'text-red-500 text-center mt-2';
+                              errorMsg.textContent = `Не удалось загрузить изображение (${currentQuestion.media?.url})`;
+                              container.appendChild(errorMsg);
+                              e.currentTarget.style.display = 'none';
+                            }
                           }}
                         />
-                        <div className="text-xs text-red-200/50 mt-1">
-                          URL: {currentQuestion.media.url}
-                        </div>
                       </div>
                     )}
                     {currentQuestion.media.type === 'video' && (

@@ -4,8 +4,8 @@ const fs = require('fs');
 // Убедимся, что директории для загрузки существуют
 const ensureDirectories = () => {
   const dirs = [
-    path.join(process.cwd(), 'public', 'uploads'),
-    path.join(process.cwd(), 'public', 'uploads', 'olympiad-media'),
+    path.join(process.cwd(), 'public', 'static'),
+    path.join(process.cwd(), 'public', 'static', 'olympiad-media'),
     path.join(process.cwd(), 'public', 'certificates'),
   ];
 
@@ -36,11 +36,11 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['pdfkit', 'fs'],
   },
-  // Добавляем обработку файлов в uploads
+  // Добавляем обработку файлов в static
   async headers() {
     return [
       {
-        source: '/uploads/:path*',
+        source: '/static/:path*',
         headers: [
           {
             key: 'Cache-Control',
