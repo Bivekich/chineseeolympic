@@ -4,8 +4,7 @@ const fs = require('fs');
 // Убедимся, что директории для загрузки существуют
 const ensureDirectories = () => {
   const dirs = [
-    path.join(process.cwd(), 'public', 'static'),
-    path.join(process.cwd(), 'public', 'static', 'olympiad-media'),
+    path.join(process.cwd(), 'public', 'olympiad-media'),
     path.join(process.cwd(), 'public', 'certificates'),
   ];
 
@@ -36,11 +35,11 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['pdfkit', 'fs'],
   },
-  // Добавляем обработку файлов в static
+  // Настройка кеширования для статических файлов
   async headers() {
     return [
       {
-        source: '/static/:path*',
+        source: '/olympiad-media/:path*',
         headers: [
           {
             key: 'Cache-Control',

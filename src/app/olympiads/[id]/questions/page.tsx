@@ -287,7 +287,8 @@ export default function AddQuestionsPage({
       setQuestions(newQuestions);
       alert(`Файл ${file.name} успешно загружен.
 Путь: ${data.url}
-Тип: ${data.type}`);
+Тип: ${data.type}
+Директория: public/olympiad-media (в корне проекта)`);
     } catch (error) {
       console.error('Error uploading media:', error);
       alert(
