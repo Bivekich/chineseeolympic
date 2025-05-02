@@ -250,6 +250,7 @@ export default function AddQuestionsPage({
     formData.append('questionIndex', questionIndex.toString());
 
     try {
+      console.log(`Uploading file for question ${questionIndex}: ${file.name}`);
       const response = await fetch(`/api/olympiads/${params.id}/media`, {
         method: 'POST',
         body: formData,
@@ -260,6 +261,10 @@ export default function AddQuestionsPage({
       }
 
       const data = await response.json();
+      console.log(
+        `Media upload successful. URL: ${data.url}, Type: ${data.type}`
+      );
+
       const newQuestions = [...questions];
       newQuestions[questionIndex] = {
         ...newQuestions[questionIndex],
@@ -273,6 +278,7 @@ export default function AddQuestionsPage({
         },
       };
       setQuestions(newQuestions);
+      alert(`Файл ${file.name} успешно загружен`);
     } catch (error) {
       console.error('Error uploading media:', error);
       alert('Ошибка при загрузке медиафайла');

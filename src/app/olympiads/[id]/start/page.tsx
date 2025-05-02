@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import ChineseLoader from "@/components/ChineseLoader";
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import ChineseLoader from '@/components/ChineseLoader';
 
 interface MatchingPair {
   left: string;
@@ -12,12 +12,12 @@ interface MatchingPair {
 interface Question {
   id: string;
   question: string;
-  type: "text" | "multiple_choice" | "matching";
+  type: 'text' | 'multiple_choice' | 'matching';
   choices?: string[];
   matchingPairs?: MatchingPair[];
   correctAnswer: string;
   media?: {
-    type: "image" | "video" | "audio";
+    type: 'image' | 'video' | 'audio';
     url: string;
   };
 }
@@ -67,46 +67,56 @@ export default function StartOlympiadPage({
     [key: string]: MatchingAnswer[];
   }>({});
   const [selectedItem, setSelectedItem] = useState<{
-    side: "left" | "right";
+    side: 'left' | 'right';
     index: number;
   } | null>(null);
-  const [scrambledChoices, setScrambledChoices] = useState<{ [key: string]: string[] }>({});
-  const [scrambledPairs, setScrambledPairs] = useState<{ [key: string]: number[] }>({});
+  const [scrambledChoices, setScrambledChoices] = useState<{
+    [key: string]: string[];
+  }>({});
+  const [scrambledPairs, setScrambledPairs] = useState<{
+    [key: string]: number[];
+  }>({});
 
   // Define handleSubmit before it's used in useEffect, wrapped in useCallback
-  const handleSubmit = useCallback(async (skipConfirmation: boolean = false) => {
-    if (!skipConfirmation && !confirm("Вы уверены, что хотите завершить олимпиаду?")) {
-      return;
-    }
-
-    if (isSubmitting) return; // Prevent multiple submissions
-
-    setIsSubmitting(true);
-    try {
-      // Clear timer data from localStorage
-      localStorage.removeItem(`olympiad_timer_${params.id}`);
-      localStorage.removeItem(`olympiad_answers_${params.id}`);
-      
-      const response = await fetch(`/api/olympiads/${params.id}/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ answers }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to submit answers");
+  const handleSubmit = useCallback(
+    async (skipConfirmation: boolean = false) => {
+      if (
+        !skipConfirmation &&
+        !confirm('Вы уверены, что хотите завершить олимпиаду?')
+      ) {
+        return;
       }
 
-      router.push(`/olympiads/${params.id}/results`);
-    } catch (error) {
-      console.error("Error submitting answers:", error);
-      alert("Ошибка при отправке ответов");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [params.id, answers, isSubmitting, router]);
+      if (isSubmitting) return; // Prevent multiple submissions
+
+      setIsSubmitting(true);
+      try {
+        // Clear timer data from localStorage
+        localStorage.removeItem(`olympiad_timer_${params.id}`);
+        localStorage.removeItem(`olympiad_answers_${params.id}`);
+
+        const response = await fetch(`/api/olympiads/${params.id}/submit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ answers }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to submit answers');
+        }
+
+        router.push(`/olympiads/${params.id}/results`);
+      } catch (error) {
+        console.error('Error submitting answers:', error);
+        alert('Ошибка при отправке ответов');
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [params.id, answers, isSubmitting, router]
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -117,7 +127,7 @@ export default function StartOlympiadPage({
         ]);
 
         if (!olympiadResponse.ok || !questionsResponse.ok) {
-          throw new Error("Failed to fetch data");
+          throw new Error('Failed to fetch data');
         }
 
         const olympiadData = await olympiadResponse.json();
@@ -149,25 +159,36 @@ export default function StartOlympiadPage({
           const initialScrambledPairs: { [key: string]: number[] } = {};
 
           questionsData.forEach((q: Question) => {
-            if (q.type === "multiple_choice" && q.choices) {
+            if (q.type === 'multiple_choice' && q.choices) {
               // Create array of indices and shuffle them
-              const indices = Array.from({ length: q.choices.length }, (_, i) => i);
+              const indices = Array.from(
+                { length: q.choices.length },
+                (_, i) => i
+              );
               initialScrambledChoices[q.id] = indices
                 .sort(() => Math.random() - 0.5)
-                .map(i => q.choices![i]);
+                .map((i) => q.choices![i]);
             }
-            if (q.type === "matching" && q.matchingPairs) {
+            if (q.type === 'matching' && q.matchingPairs) {
               // Create array of indices and shuffle them
-              const indices = Array.from({ length: q.matchingPairs.length }, (_, i) => i);
-              initialScrambledPairs[q.id] = indices.sort(() => Math.random() - 0.5);
+              const indices = Array.from(
+                { length: q.matchingPairs.length },
+                (_, i) => i
+              );
+              initialScrambledPairs[q.id] = indices.sort(
+                () => Math.random() - 0.5
+              );
             }
           });
 
           // Save to localStorage
-          localStorage.setItem(scrambledKey, JSON.stringify({
-            choices: initialScrambledChoices,
-            pairs: initialScrambledPairs
-          }));
+          localStorage.setItem(
+            scrambledKey,
+            JSON.stringify({
+              choices: initialScrambledChoices,
+              pairs: initialScrambledPairs,
+            })
+          );
 
           setScrambledChoices(initialScrambledChoices);
           setScrambledPairs(initialScrambledPairs);
@@ -179,17 +200,17 @@ export default function StartOlympiadPage({
 
         setOlympiad(olympiadData[0]);
         setQuestions(questionsData);
-        
+
         // Check if we have a saved timer state in localStorage
         const timerKey = `olympiad_timer_${params.id}`;
         const savedEndTime = localStorage.getItem(timerKey);
-        
+
         if (savedEndTime) {
           // Calculate remaining time based on saved end time
           const endTime = parseInt(savedEndTime, 10);
           const now = Math.floor(Date.now() / 1000);
           const remaining = Math.max(0, endTime - now);
-          
+
           if (remaining > 0) {
             // If there's time remaining, use it
             setTimeLeft(remaining);
@@ -201,10 +222,11 @@ export default function StartOlympiadPage({
         } else {
           // If no saved timer, initialize with full duration and save end time
           setTimeLeft(olympiadData[0].duration);
-          const endTime = Math.floor(Date.now() / 1000) + olympiadData[0].duration;
+          const endTime =
+            Math.floor(Date.now() / 1000) + olympiadData[0].duration;
           localStorage.setItem(timerKey, endTime.toString());
         }
-        
+
         // Also try to load saved answers
         const answersKey = `olympiad_answers_${params.id}`;
         const savedAnswers = localStorage.getItem(answersKey);
@@ -212,11 +234,11 @@ export default function StartOlympiadPage({
           try {
             setAnswers(JSON.parse(savedAnswers));
           } catch (e) {
-            console.error("Error parsing saved answers:", e);
+            console.error('Error parsing saved answers:', e);
           }
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
@@ -244,7 +266,7 @@ export default function StartOlympiadPage({
 
     return () => clearInterval(timer);
   }, [timeLeft, olympiad, handleSubmit]);
-  
+
   // Save answers to localStorage whenever they change
   useEffect(() => {
     if (Object.keys(answers).length > 0) {
@@ -257,9 +279,9 @@ export default function StartOlympiadPage({
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes
+    return `${hours.toString().padStart(2, '0')}:${minutes
       .toString()
-      .padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+      .padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const handleAnswerChange = (questionId: string, answer: string) => {
@@ -304,22 +326,22 @@ export default function StartOlympiadPage({
 
   const handleDragStart = (e: React.DragEvent, item: DragItem) => {
     setDraggedItem(item);
-    e.dataTransfer.setData("text/plain", item.content);
-    e.currentTarget.classList.add("opacity-50");
+    e.dataTransfer.setData('text/plain', item.content);
+    e.currentTarget.classList.add('opacity-50');
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("opacity-50");
+    e.currentTarget.classList.remove('opacity-50');
     setDraggedItem(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.add("bg-red-700/30");
+    e.currentTarget.classList.add('bg-red-700/30');
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("bg-red-700/30");
+    e.currentTarget.classList.remove('bg-red-700/30');
   };
 
   const handleDrop = (
@@ -328,7 +350,7 @@ export default function StartOlympiadPage({
     leftItem: string
   ) => {
     e.preventDefault();
-    e.currentTarget.classList.remove("bg-red-700/30");
+    e.currentTarget.classList.remove('bg-red-700/30');
 
     if (!draggedItem) return;
 
@@ -349,7 +371,7 @@ export default function StartOlympiadPage({
 
   const handleMatchingClick = (
     questionId: string,
-    side: "left" | "right",
+    side: 'left' | 'right',
     index: number
   ) => {
     if (!selectedItem) {
@@ -360,8 +382,8 @@ export default function StartOlympiadPage({
       setSelectedItem(null);
     } else {
       // Matching attempt
-      const leftIndex = side === "left" ? index : selectedItem.index;
-      const rightIndex = side === "right" ? index : selectedItem.index;
+      const leftIndex = side === 'left' ? index : selectedItem.index;
+      const rightIndex = side === 'right' ? index : selectedItem.index;
 
       // Remove any existing matches with these indices
       const filteredMatches = (matchingSelections[questionId] || []).filter(
@@ -398,7 +420,7 @@ export default function StartOlympiadPage({
 
   const isItemSelected = (
     questionId: string,
-    side: "left" | "right",
+    side: 'left' | 'right',
     index: number
   ) => {
     return selectedItem?.side === side && selectedItem.index === index;
@@ -406,27 +428,27 @@ export default function StartOlympiadPage({
 
   const isItemMatched = (
     questionId: string,
-    side: "left" | "right",
+    side: 'left' | 'right',
     index: number
   ) => {
     const matches = matchingSelections[questionId] || [];
     return matches.some(
       (match) =>
-        (side === "left" && match.leftIndex === index) ||
-        (side === "right" && match.rightIndex === index)
+        (side === 'left' && match.leftIndex === index) ||
+        (side === 'right' && match.rightIndex === index)
     );
   };
 
   const getMatchedPair = (
     questionId: string,
-    side: "left" | "right",
+    side: 'left' | 'right',
     index: number
   ) => {
     const matches = matchingSelections[questionId] || [];
     const match = matches.find(
       (m) =>
-        (side === "left" && m.leftIndex === index) ||
-        (side === "right" && m.rightIndex === index)
+        (side === 'left' && m.leftIndex === index) ||
+        (side === 'right' && m.rightIndex === index)
     );
     return match;
   };
@@ -465,12 +487,12 @@ export default function StartOlympiadPage({
                     key={index}
                     className={`w-3 h-3 rounded-full ${
                       answers[questions[index].id]
-                        ? "bg-green-500"
-                        : "bg-red-200/20"
+                        ? 'bg-green-500'
+                        : 'bg-red-200/20'
                     } ${
                       index === currentQuestionIndex
-                        ? "ring-2 ring-red-200"
-                        : ""
+                        ? 'ring-2 ring-red-200'
+                        : ''
                     }`}
                   />
                 ))}
@@ -486,36 +508,57 @@ export default function StartOlympiadPage({
                 </h3>
 
                 {/* Add media display */}
-                {currentQuestion.media && (
+                {currentQuestion.media && currentQuestion.media.url && (
                   <div className="mb-6">
-                    {currentQuestion.media.type === "image" && (
+                    {currentQuestion.media.type === 'image' && (
                       <img
                         src={currentQuestion.media.url}
                         alt="Question media"
                         className="max-w-full max-h-[400px] rounded-lg object-contain mx-auto"
+                        onError={(e) => {
+                          console.error(
+                            `Failed to load image: ${currentQuestion.media?.url}`
+                          );
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     )}
-                    {currentQuestion.media.type === "video" && (
+                    {currentQuestion.media.type === 'video' && (
                       <video
                         src={currentQuestion.media.url}
                         controls
                         className="max-w-full max-h-[400px] rounded-lg mx-auto"
+                        onError={(e) => {
+                          console.error(
+                            `Failed to load video: ${currentQuestion.media?.url}`
+                          );
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     )}
-                    {currentQuestion.media.type === "audio" && (
+                    {currentQuestion.media.type === 'audio' && (
                       <audio
                         src={currentQuestion.media.url}
                         controls
                         className="w-full"
+                        onError={(e) => {
+                          console.error(
+                            `Failed to load audio: ${currentQuestion.media?.url}`
+                          );
+                          e.currentTarget.style.display = 'none';
+                        }}
                       />
                     )}
                   </div>
                 )}
 
-                {currentQuestion.type === "multiple_choice" &&
+                {currentQuestion.type === 'multiple_choice' &&
                 currentQuestion.choices ? (
                   <div className="space-y-3">
-                    {(scrambledChoices[currentQuestion.id] || currentQuestion.choices).map((choice, index) => (
+                    {(
+                      scrambledChoices[currentQuestion.id] ||
+                      currentQuestion.choices
+                    ).map((choice, index) => (
                       <label
                         key={index}
                         className="flex items-center space-x-3 p-3 bg-white/10 rounded-lg cursor-pointer hover:bg-white/20 transition-colors"
@@ -537,7 +580,7 @@ export default function StartOlympiadPage({
                       </label>
                     ))}
                   </div>
-                ) : currentQuestion.type === "matching" &&
+                ) : currentQuestion.type === 'matching' &&
                   currentQuestion.matchingPairs ? (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-8">
@@ -549,26 +592,26 @@ export default function StartOlympiadPage({
                             onClick={() =>
                               handleMatchingClick(
                                 currentQuestion.id,
-                                "left",
+                                'left',
                                 index
                               )
                             }
                             className={`p-4 rounded-lg transition-all cursor-pointer relative ${
-                              isItemSelected(currentQuestion.id, "left", index)
-                                ? "bg-red-700/50 border-2 border-red-200"
+                              isItemSelected(currentQuestion.id, 'left', index)
+                                ? 'bg-red-700/50 border-2 border-red-200'
                                 : isItemMatched(
                                     currentQuestion.id,
-                                    "left",
+                                    'left',
                                     index
                                   )
-                                ? "bg-white/20 border-2 border-green-400/50"
-                                : "bg-white/10 hover:bg-white/20"
+                                ? 'bg-white/20 border-2 border-green-400/50'
+                                : 'bg-white/10 hover:bg-white/20'
                             }`}
                           >
                             <span className="text-white">{pair.left}</span>
                             {isItemMatched(
                               currentQuestion.id,
-                              "left",
+                              'left',
                               index
                             ) && (
                               <div className="absolute right-0 top-0 h-full w-2 bg-green-400/50 rounded-r-lg" />
@@ -579,45 +622,51 @@ export default function StartOlympiadPage({
 
                       {/* Right column - now using scrambled order */}
                       <div className="space-y-4">
-                        {currentQuestion.matchingPairs && scrambledPairs[currentQuestion.id]?.map((scrambledIndex) => {
-                          const pair = currentQuestion.matchingPairs![scrambledIndex];
-                          return (
-                            <div
-                              key={`right-${scrambledIndex}`}
-                              onClick={() =>
-                                handleMatchingClick(
-                                  currentQuestion.id,
-                                  "right",
-                                  scrambledIndex
-                                )
-                              }
-                              className={`p-4 rounded-lg transition-all cursor-pointer relative ${
-                                isItemSelected(
-                                  currentQuestion.id,
-                                  "right",
-                                  scrambledIndex
-                                )
-                                  ? "bg-red-700/50 border-2 border-red-200"
-                                  : isItemMatched(
+                        {currentQuestion.matchingPairs &&
+                          scrambledPairs[currentQuestion.id]?.map(
+                            (scrambledIndex) => {
+                              const pair =
+                                currentQuestion.matchingPairs![scrambledIndex];
+                              return (
+                                <div
+                                  key={`right-${scrambledIndex}`}
+                                  onClick={() =>
+                                    handleMatchingClick(
                                       currentQuestion.id,
-                                      "right",
+                                      'right',
                                       scrambledIndex
                                     )
-                                  ? "bg-white/20 border-2 border-green-400/50"
-                                  : "bg-white/10 hover:bg-white/20"
-                              }`}
-                            >
-                              <span className="text-white">{pair.right}</span>
-                              {isItemMatched(
-                                currentQuestion.id,
-                                "right",
-                                scrambledIndex
-                              ) && (
-                                <div className="absolute left-0 top-0 h-full w-2 bg-green-400/50 rounded-l-lg" />
-                              )}
-                            </div>
-                          );
-                        })}
+                                  }
+                                  className={`p-4 rounded-lg transition-all cursor-pointer relative ${
+                                    isItemSelected(
+                                      currentQuestion.id,
+                                      'right',
+                                      scrambledIndex
+                                    )
+                                      ? 'bg-red-700/50 border-2 border-red-200'
+                                      : isItemMatched(
+                                          currentQuestion.id,
+                                          'right',
+                                          scrambledIndex
+                                        )
+                                      ? 'bg-white/20 border-2 border-green-400/50'
+                                      : 'bg-white/10 hover:bg-white/20'
+                                  }`}
+                                >
+                                  <span className="text-white">
+                                    {pair.right}
+                                  </span>
+                                  {isItemMatched(
+                                    currentQuestion.id,
+                                    'right',
+                                    scrambledIndex
+                                  ) && (
+                                    <div className="absolute left-0 top-0 h-full w-2 bg-green-400/50 rounded-l-lg" />
+                                  )}
+                                </div>
+                              );
+                            }
+                          )}
                       </div>
                     </div>
 
@@ -644,7 +693,7 @@ export default function StartOlympiadPage({
                   </div>
                 ) : (
                   <textarea
-                    value={answers[currentQuestion.id] || ""}
+                    value={answers[currentQuestion.id] || ''}
                     onChange={(e) =>
                       handleAnswerChange(currentQuestion.id, e.target.value)
                     }
@@ -671,7 +720,7 @@ export default function StartOlympiadPage({
               disabled={isSubmitting}
               className="px-6 py-3 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-500 transition-colors disabled:opacity-50"
             >
-              {isSubmitting ? "Отправка..." : "Завершить олимпиаду"}
+              {isSubmitting ? 'Отправка...' : 'Завершить олимпиаду'}
             </button>
 
             <button

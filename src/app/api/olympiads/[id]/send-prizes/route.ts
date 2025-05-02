@@ -96,7 +96,7 @@ export async function POST(
           'public',
           result.certificateUrl.replace(/^\//, '') // Remove leading slash if exists
         );
-        
+
         // Verify file exists before attempting to attach
         if (fs.existsSync(certificateFilePath)) {
           attachments.push({
@@ -107,14 +107,14 @@ export async function POST(
           certificateDownloadUrl = `${process.env.NEXT_PUBLIC_APP_URL}${result.certificateUrl}`;
         } else {
           console.warn(
-            `Certificate file not found at path: ${certificateFilePath}. 
+            `Certificate file not found at path: ${certificateFilePath}.
              Email will be sent without the certificate attachment and with a non-functional download link.`
           );
           // Optionally, you could decide not to send the email or handle differently
         }
       } else {
         console.warn(
-          `Certificate URL missing for participant result ID: ${result.id}. 
+          `Certificate URL missing for participant result ID: ${result.id}.
            Email will be sent without the certificate attachment.`
         );
       }
@@ -139,25 +139,26 @@ export async function POST(
 
                 <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                   <h2 style="color: #1f2937; margin-top: 0;">Поздравляем!</h2>
-                  <p style="color: #4b5563;">Уважаемый(ая) ${participant.fullName}!</p>
-                  <p style="color: #4b5563;">Вы заняли ${result.place} место в олимпиаде "${olympiad.title}".</p>
+                  <p style="color: #4b5563;">Уважаемый(ая) ${
+                    participant.fullName
+                  }!</p>
+                  <p style="color: #4b5563;">Вы заняли ${
+                    result.place
+                  } место в олимпиаде "${olympiad.title}".</p>
 
                   <div style="margin: 20px 0; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
-                    <p style="color: #92400e; margin: 0;">🏆 Ваш приз: ${prize.description || `Приз за ${result.place} место`}</p>
+                    <p style="color: #92400e; margin: 0;">🏆 Ваш приз: ${
+                      prize.description || `Приз за ${result.place} место`
+                    }</p>
                     <p style="color: #92400e; font-weight: bold; margin: 10px 0 0 0;">🎫 Ваш промокод: ${promoCode}</p>
                   </div>
 
                   <div style="margin-top: 20px; text-align: center;">
-                    ${attachments.length > 0 
-                      ? '<p style="color: #4b5563; margin-bottom: 15px;">К письму прикреплен ваш диплом.</p>' 
-                      : '<p style="color: #4b5563; margin-bottom: 15px;">Ваш диплом был сгенерирован.</p>'}
-                    <p style="color: #4b5563; margin-bottom: 15px;">
-                      Вы можете скачать его по этой ссылке:
-                    </p>
-                    <a href="${certificateDownloadUrl}" 
-                       style="display: inline-block; background-color: #991b1b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
-                      Скачать диплом
-                    </a>
+                    ${
+                      attachments.length > 0
+                        ? '<p style="color: #4b5563; margin-bottom: 15px;">К письму прикреплен ваш диплом.</p>'
+                        : '<p style="color: #4b5563; margin-bottom: 15px;">Ваш диплом был сгенерирован, но временно недоступен.</p>'
+                    }
                   </div>
 
                   <p style="color: #4b5563; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
