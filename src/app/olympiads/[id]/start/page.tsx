@@ -19,6 +19,7 @@ interface Question {
   media?: {
     type: 'image' | 'video' | 'audio';
     url: string;
+    key?: string;
   };
 }
 
@@ -117,6 +118,26 @@ export default function StartOlympiadPage({
     },
     [params.id, answers, isSubmitting, router]
   );
+
+  // Функция для обновления presigned URL
+  const refreshPresignedUrl = async (objectKey: string) => {
+    if (!objectKey) return null;
+
+    try {
+      const response = await fetch(
+        `/api/olympiads/${params.id}/media?key=${encodeURIComponent(objectKey)}`
+      );
+      if (!response.ok) {
+        throw new Error('Failed to refresh presigned URL');
+      }
+
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error('Error refreshing presigned URL:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -509,78 +530,152 @@ export default function StartOlympiadPage({
 
                 {/* Add media display */}
                 {currentQuestion.media && currentQuestion.media.url && (
-                  <div className="mb-6">
+                  <div className="mt-6 bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-red-200/20">
                     {currentQuestion.media.type === 'image' && (
-                      <div className="relative">
+                      <div className="flex justify-center">
                         <img
                           src={currentQuestion.media.url}
                           alt="Question media"
-                          className="max-w-full max-h-[400px] rounded-lg object-contain mx-auto"
-                          onError={(e) => {
+                          className="max-w-full h-auto max-h-[300px] rounded-lg"
+                          onLoad={() =>
+                            console.log('Image loaded successfully')
+                          }
+                          onError={async (e) => {
                             console.error(
                               `Failed to load image: ${currentQuestion.media?.url}`
                             );
-                            const container = e.currentTarget.parentElement;
-                            if (container) {
+                            const errorImg = e.currentTarget;
+
+                            // Если у объекта есть ключ, обновляем presigned URL
+                            if (currentQuestion.media?.key) {
+                              const newUrl = await refreshPresignedUrl(
+                                currentQuestion.media.key
+                              );
+                              if (newUrl) {
+                                errorImg.src = newUrl;
+
+                                // Обновляем URL в состоянии вопросов
+                                const updatedQuestions = [...questions];
+                                if (
+                                  updatedQuestions[currentQuestionIndex].media
+                                ) {
+                                  updatedQuestions[
+                                    currentQuestionIndex
+                                  ].media!.url = newUrl;
+                                  setQuestions(updatedQuestions);
+                                }
+                                return;
+                              }
+                            }
+
+                            // Если не удалось обновить URL или нет ключа, показываем сообщение об ошибке
+                            errorImg.style.display = 'none';
+                            const errorContainer = errorImg.parentElement;
+                            if (errorContainer) {
                               const errorMsg = document.createElement('div');
                               errorMsg.className =
-                                'text-red-500 text-center mt-2';
+                                'text-red-300 text-center p-4';
                               errorMsg.textContent = `Не удалось загрузить изображение (${currentQuestion.media?.url})`;
-                              container.appendChild(errorMsg);
-                              e.currentTarget.style.display = 'none';
+                              errorContainer.appendChild(errorMsg);
                             }
                           }}
                         />
                       </div>
                     )}
                     {currentQuestion.media.type === 'video' && (
-                      <div>
+                      <div className="flex justify-center">
                         <video
                           src={currentQuestion.media.url}
                           controls
-                          className="max-w-full max-h-[400px] rounded-lg mx-auto"
-                          onError={(e) => {
+                          className="max-w-full h-auto max-h-[300px] rounded-lg"
+                          onError={async (e) => {
                             console.error(
                               `Failed to load video: ${currentQuestion.media?.url}`
                             );
-                            // Показываем сообщение об ошибке вместо скрытия элемента
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className =
-                              'text-red-500 p-2 border border-red-300 rounded';
-                            errorDiv.textContent = `Не удалось загрузить видео (${currentQuestion.media?.url})`;
-                            target.parentNode?.appendChild(errorDiv);
+                            const errorVideo = e.currentTarget;
+
+                            // Если у объекта есть ключ, обновляем presigned URL
+                            if (currentQuestion.media?.key) {
+                              const newUrl = await refreshPresignedUrl(
+                                currentQuestion.media.key
+                              );
+                              if (newUrl) {
+                                errorVideo.src = newUrl;
+
+                                // Обновляем URL в состоянии вопросов
+                                const updatedQuestions = [...questions];
+                                if (
+                                  updatedQuestions[currentQuestionIndex].media
+                                ) {
+                                  updatedQuestions[
+                                    currentQuestionIndex
+                                  ].media!.url = newUrl;
+                                  setQuestions(updatedQuestions);
+                                }
+                                return;
+                              }
+                            }
+
+                            // Если не удалось обновить URL или нет ключа, показываем сообщение об ошибке
+                            errorVideo.style.display = 'none';
+                            const errorContainer = errorVideo.parentElement;
+                            if (errorContainer) {
+                              const errorDiv = document.createElement('div');
+                              errorDiv.className =
+                                'text-red-300 text-center p-4';
+                              errorDiv.textContent = `Не удалось загрузить видео (${currentQuestion.media?.url})`;
+                              errorContainer.appendChild(errorDiv);
+                            }
                           }}
                         />
-                        <div className="text-xs text-red-200/50 mt-1">
-                          URL: {currentQuestion.media.url}
-                        </div>
                       </div>
                     )}
                     {currentQuestion.media.type === 'audio' && (
-                      <div>
+                      <div className="flex flex-col items-center gap-2">
                         <audio
                           src={currentQuestion.media.url}
                           controls
                           className="w-full"
-                          onError={(e) => {
+                          onError={async (e) => {
                             console.error(
                               `Failed to load audio: ${currentQuestion.media?.url}`
                             );
-                            // Показываем сообщение об ошибке вместо скрытия элемента
-                            const target = e.currentTarget;
-                            target.style.display = 'none';
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className =
-                              'text-red-500 p-2 border border-red-300 rounded';
-                            errorDiv.textContent = `Не удалось загрузить аудио (${currentQuestion.media?.url})`;
-                            target.parentNode?.appendChild(errorDiv);
+                            const errorAudio = e.currentTarget;
+
+                            // Если у объекта есть ключ, обновляем presigned URL
+                            if (currentQuestion.media?.key) {
+                              const newUrl = await refreshPresignedUrl(
+                                currentQuestion.media.key
+                              );
+                              if (newUrl) {
+                                errorAudio.src = newUrl;
+
+                                // Обновляем URL в состоянии вопросов
+                                const updatedQuestions = [...questions];
+                                if (
+                                  updatedQuestions[currentQuestionIndex].media
+                                ) {
+                                  updatedQuestions[
+                                    currentQuestionIndex
+                                  ].media!.url = newUrl;
+                                  setQuestions(updatedQuestions);
+                                }
+                                return;
+                              }
+                            }
+
+                            // Если не удалось обновить URL или нет ключа, показываем сообщение об ошибке
+                            errorAudio.style.display = 'none';
+                            const errorContainer = errorAudio.parentElement;
+                            if (errorContainer) {
+                              const errorDiv = document.createElement('div');
+                              errorDiv.className =
+                                'text-red-300 text-center p-4';
+                              errorDiv.textContent = `Не удалось загрузить аудио (${currentQuestion.media?.url})`;
+                              errorContainer.appendChild(errorDiv);
+                            }
                           }}
                         />
-                        <div className="text-xs text-red-200/50 mt-1">
-                          URL: {currentQuestion.media.url}
-                        </div>
                       </div>
                     )}
                   </div>

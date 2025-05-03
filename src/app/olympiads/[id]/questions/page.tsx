@@ -11,6 +11,7 @@ interface MatchingPair {
 interface QuestionMedia {
   type: 'image' | 'video' | 'audio';
   url: string;
+  key?: string;
 }
 
 interface Question {
@@ -282,13 +283,16 @@ export default function AddQuestionsPage({
             ? 'video'
             : 'audio',
           url: data.url,
+          key: data.key,
         },
       };
       setQuestions(newQuestions);
       alert(`Файл ${file.name} успешно загружен.
 Путь: ${data.url}
 Тип: ${data.type}
-Директория: public/olympiad-media (в корне проекта)`);
+Директория: olympiad-media (S3 хранилище)
+
+URL для доступа действителен в течение 24 часов. После этого времени система автоматически сгенерирует новую ссылку при необходимости.`);
     } catch (error) {
       console.error('Error uploading media:', error);
       alert(
@@ -297,6 +301,34 @@ export default function AddQuestionsPage({
         }`
       );
     }
+  };
+
+  // Функция для обновления presigned URL
+  const refreshPresignedUrl = async (
+    questionIndex: number,
+    objectKey: string
+  ) => {
+    if (!objectKey) return;
+
+    try {
+      const response = await fetch(
+        `/api/olympiads/${params.id}/media?key=${encodeURIComponent(objectKey)}`
+      );
+      if (!response.ok) {
+        throw new Error('Failed to refresh presigned URL');
+      }
+
+      const data = await response.json();
+      const newQuestions = [...questions];
+      if (newQuestions[questionIndex].media) {
+        newQuestions[questionIndex].media!.url = data.url;
+        setQuestions(newQuestions);
+        return data.url;
+      }
+    } catch (error) {
+      console.error('Error refreshing presigned URL:', error);
+    }
+    return null;
   };
 
   const saveQuestions = async (publish: boolean = false) => {
@@ -642,17 +674,73 @@ export default function AddQuestionsPage({
                       {question.media && (
                         <div className="relative">
                           {question.media.type === 'image' && (
-                            <img
-                              src={question.media.url}
-                              alt="Question media"
-                              className="h-20 w-20 object-cover rounded-lg"
-                            />
+                            <div className="h-20 w-20 flex items-center justify-center bg-gray-200 rounded-lg overflow-hidden relative">
+                              <img
+                                src={question.media.url}
+                                alt="Медиа для вопроса"
+                                className="h-full w-full object-cover"
+                                onError={async (e) => {
+                                  const target = e.currentTarget;
+                                  // Если у объекта есть ключ, попробуем обновить URL
+                                  if (question.media?.key) {
+                                    const newUrl = await refreshPresignedUrl(
+                                      index,
+                                      question.media.key
+                                    );
+                                    if (newUrl) {
+                                      target.src = newUrl;
+                                      return; // Если успешно обновили URL, пробуем снова загрузить
+                                    }
+                                  }
+
+                                  // Если не удалось обновить URL или нет ключа, показываем fallback
+                                  target.style.display = 'none';
+                                  const parent = target.parentElement;
+                                  if (parent) {
+                                    const fallback =
+                                      document.createElement('div');
+                                    fallback.className =
+                                      'absolute inset-0 flex items-center justify-center text-xs text-gray-600 p-1 text-center';
+                                    fallback.textContent =
+                                      'Изображение загружено, но недоступно для просмотра';
+                                    parent.appendChild(fallback);
+                                  }
+                                }}
+                              />
+                            </div>
                           )}
                           {question.media.type === 'video' && (
                             <video
                               src={question.media.url}
                               className="h-20 w-20 object-cover rounded-lg"
                               controls
+                              onError={async (e) => {
+                                const target = e.currentTarget;
+                                // Если у объекта есть ключ, попробуем обновить URL
+                                if (question.media?.key) {
+                                  const newUrl = await refreshPresignedUrl(
+                                    index,
+                                    question.media.key
+                                  );
+                                  if (newUrl) {
+                                    target.src = newUrl;
+                                    return; // Если успешно обновили URL, пробуем снова загрузить
+                                  }
+                                }
+
+                                // Если не удалось обновить URL или нет ключа, показываем fallback
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback =
+                                    document.createElement('div');
+                                  fallback.className =
+                                    'h-20 w-20 flex items-center justify-center bg-gray-200 rounded-lg text-xs text-gray-600 p-1 text-center';
+                                  fallback.textContent =
+                                    'Видео загружено, но недоступно для просмотра';
+                                  parent.appendChild(fallback);
+                                }
+                              }}
                             />
                           )}
                           {question.media.type === 'audio' && (
@@ -660,6 +748,33 @@ export default function AddQuestionsPage({
                               src={question.media.url}
                               className="w-full"
                               controls
+                              onError={async (e) => {
+                                const target = e.currentTarget;
+                                // Если у объекта есть ключ, попробуем обновить URL
+                                if (question.media?.key) {
+                                  const newUrl = await refreshPresignedUrl(
+                                    index,
+                                    question.media.key
+                                  );
+                                  if (newUrl) {
+                                    target.src = newUrl;
+                                    return; // Если успешно обновили URL, пробуем снова загрузить
+                                  }
+                                }
+
+                                // Если не удалось обновить URL или нет ключа, показываем fallback
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  const fallback =
+                                    document.createElement('div');
+                                  fallback.className =
+                                    'w-full h-10 flex items-center justify-center bg-gray-200 rounded-lg text-xs text-gray-600 p-1 text-center';
+                                  fallback.textContent =
+                                    'Аудио загружено, но недоступно для прослушивания';
+                                  parent.appendChild(fallback);
+                                }
+                              }}
                             />
                           )}
                           <button

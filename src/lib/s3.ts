@@ -25,7 +25,7 @@ const bucketName = process.env.S3_BUCKET_NAME || 'chinesestar';
  * @param fileName - Имя файла в хранилище
  * @param contentType - MIME-тип файла
  * @param folder - Директория внутри бакета (без слеша в начале)
- * @returns URL загруженного файла
+ * @returns Ключ загруженного объекта для дальнейшего использования
  */
 export async function uploadToS3(
   fileBuffer: Buffer,
@@ -43,12 +43,11 @@ export async function uploadToS3(
         Key: key,
         Body: fileBuffer,
         ContentType: contentType,
-        ACL: 'public-read', // Делаем файлы доступными публично
       })
     );
 
-    // Возвращаем публичный URL
-    return `https://${bucketName}.s3.ru-7.storage.selcloud.ru/${key}`;
+    // Возвращаем ключ объекта
+    return key;
   } catch (error) {
     console.error('[S3] Error uploading file:', error);
     throw new Error(

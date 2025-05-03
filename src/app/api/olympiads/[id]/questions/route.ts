@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { questions, olympiads } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { verifyAuth } from "@/lib/auth";
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { questions, olympiads } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { verifyAuth } from '@/lib/auth';
+import { getSignedS3Url } from '@/lib/s3';
 
 export async function GET(
   request: NextRequest,
@@ -11,7 +12,7 @@ export async function GET(
   try {
     const userId = await verifyAuth();
     if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const olympiadQuestions = await db.query.questions.findMany({
@@ -26,11 +27,43 @@ export async function GET(
       media: q.media ? JSON.parse(q.media) : null,
     }));
 
-    return NextResponse.json(parsedQuestions);
+    // Обновляем presigned URL для медиа-файлов
+    const updatedQuestions = await Promise.all(
+      parsedQuestions.map(async (question) => {
+        if (question.media && question.media.key) {
+          try {
+            // Генерируем новый presigned URL для объекта
+            const presignedUrl = await getSignedS3Url(
+              question.media.key,
+              24 * 60 * 60
+            );
+
+            // Обновляем URL, сохраняя ключ
+            return {
+              ...question,
+              media: {
+                ...question.media,
+                url: presignedUrl,
+              },
+            };
+          } catch (error) {
+            console.error(
+              `Error generating presigned URL for question ${question.id}:`,
+              error
+            );
+            // Возвращаем вопрос без изменений
+            return question;
+          }
+        }
+        return question;
+      })
+    );
+
+    return NextResponse.json(updatedQuestions);
   } catch (error) {
-    console.error("Error fetching questions:", error);
+    console.error('Error fetching questions:', error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -43,7 +76,7 @@ export async function PUT(
   try {
     const userId = await verifyAuth();
     if (!userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const { questions: newQuestions, publish } = await request.json();
@@ -51,7 +84,7 @@ export async function PUT(
     // Validate questions
     if (!Array.isArray(newQuestions) || newQuestions.length === 0) {
       return NextResponse.json(
-        { message: "Invalid questions data" },
+        { message: 'Invalid questions data' },
         { status: 400 }
       );
     }
@@ -60,7 +93,7 @@ export async function PUT(
       if (!q.question) {
         return NextResponse.json(
           {
-            message: "All questions must have question text",
+            message: 'All questions must have question text',
           },
           { status: 400 }
         );
@@ -68,18 +101,18 @@ export async function PUT(
 
       // Validate based on question type
       switch (q.type) {
-        case "text":
+        case 'text':
           if (!q.correctAnswer) {
             return NextResponse.json(
               {
-                message: "Text questions must have a correct answer",
+                message: 'Text questions must have a correct answer',
               },
               { status: 400 }
             );
           }
           break;
 
-        case "multiple_choice":
+        case 'multiple_choice':
           if (
             !q.choices ||
             !Array.isArray(q.choices) ||
@@ -89,14 +122,14 @@ export async function PUT(
             return NextResponse.json(
               {
                 message:
-                  "Multiple choice questions must have at least 2 choices and a correct answer",
+                  'Multiple choice questions must have at least 2 choices and a correct answer',
               },
               { status: 400 }
             );
           }
           break;
 
-        case "matching":
+        case 'matching':
           if (
             !q.matchingPairs ||
             !Array.isArray(q.matchingPairs) ||
@@ -104,7 +137,7 @@ export async function PUT(
           ) {
             return NextResponse.json(
               {
-                message: "Matching questions must have at least 2 pairs",
+                message: 'Matching questions must have at least 2 pairs',
               },
               { status: 400 }
             );
@@ -116,7 +149,7 @@ export async function PUT(
         default:
           return NextResponse.json(
             {
-              message: "Invalid question type",
+              message: 'Invalid question type',
             },
             { status: 400 }
           );
@@ -130,13 +163,13 @@ export async function PUT(
 
     if (!olympiad) {
       return NextResponse.json(
-        { message: "Olympiad not found" },
+        { message: 'Olympiad not found' },
         { status: 404 }
       );
     }
 
     if (olympiad.creatorId !== userId) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     // Start a transaction
@@ -168,11 +201,11 @@ export async function PUT(
         .where(eq(olympiads.id, params.id));
     });
 
-    return NextResponse.json({ message: "Questions updated successfully" });
+    return NextResponse.json({ message: 'Questions updated successfully' });
   } catch (error) {
-    console.error("Error updating questions:", error);
+    console.error('Error updating questions:', error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }
