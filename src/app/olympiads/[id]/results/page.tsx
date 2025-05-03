@@ -1,13 +1,15 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import ChineseLoader from "@/components/ChineseLoader";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import ChineseLoader from '@/components/ChineseLoader';
 
 interface Result {
   id: string;
   score: string;
   completedAt: string;
+  place: string | null;
+  certificateUrl: string | null;
   olympiad: {
     title: string;
     level: string;
@@ -18,18 +20,20 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [result, setResult] = useState<Result | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [certificateLoading, setCertificateLoading] = useState(false);
+  const [certificateError, setCertificateError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResult = async () => {
       try {
         const response = await fetch(`/api/olympiads/${params.id}/result`);
         if (!response.ok) {
-          throw new Error("Failed to fetch result");
+          throw new Error('Failed to fetch result');
         }
         const data = await response.json();
         setResult(data);
       } catch (error) {
-        console.error("Error fetching result:", error);
+        console.error('Error fetching result:', error);
       } finally {
         setIsLoading(false);
       }
@@ -37,6 +41,25 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
 
     fetchResult();
   }, [params.id]);
+
+  const downloadCertificate = async () => {
+    if (!result?.certificateUrl) return;
+
+    setCertificateLoading(true);
+    setCertificateError(null);
+
+    try {
+      // Открываем ссылку на сертификат в новом окне
+      window.open(result.certificateUrl, '_blank');
+    } catch (error) {
+      console.error('Error opening certificate:', error);
+      setCertificateError(
+        'Ошибка при открытии сертификата. Пожалуйста, попробуйте позже.'
+      );
+    } finally {
+      setCertificateLoading(false);
+    }
+  };
 
   if (isLoading) {
     return <ChineseLoader text="Загрузка результатов..." />;
@@ -65,6 +88,18 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                   {result.score}%
                 </div>
                 <p className="text-red-200/80">Ваш результат</p>
+
+                {result.place && (
+                  <div className="mt-4 inline-block px-4 py-2 bg-red-700/30 rounded-full text-white font-medium">
+                    {result.place === '1'
+                      ? '🥇 Первое место'
+                      : result.place === '2'
+                      ? '🥈 Второе место'
+                      : result.place === '3'
+                      ? '🥉 Третье место'
+                      : `${result.place} место`}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-6">
@@ -82,9 +117,31 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
+              {result.certificateUrl ? (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={downloadCertificate}
+                    disabled={certificateLoading}
+                    className="px-6 py-3 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-green-500 transition-colors disabled:bg-opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {certificateLoading ? 'Загрузка...' : 'Скачать сертификат'}
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center pt-4 text-yellow-300">
+                  <p>Сертификат будет доступен после финализации олимпиады.</p>
+                </div>
+              )}
+
+              {certificateError && (
+                <div className="text-center pt-2 text-red-300">
+                  <p>{certificateError}</p>
+                </div>
+              )}
+
               <div className="flex justify-center pt-6">
                 <button
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => router.push('/dashboard')}
                   className="px-6 py-3 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-500 transition-colors"
                 >
                   Вернуться на главную

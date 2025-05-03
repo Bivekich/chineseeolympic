@@ -636,14 +636,25 @@ export default function StartOlympiadPage({
                           src={currentQuestion.media.url}
                           controls
                           className="w-full"
+                          preload="auto"
+                          onLoadedMetadata={() => {
+                            console.log('Audio metadata loaded successfully');
+                          }}
+                          onCanPlay={() => {
+                            console.log('Audio can play now');
+                          }}
                           onError={async (e) => {
                             console.error(
                               `Failed to load audio: ${currentQuestion.media?.url}`
                             );
                             const errorAudio = e.currentTarget;
 
-                            // Если у объекта есть ключ, обновляем presigned URL
-                            if (currentQuestion.media?.key) {
+                            // Проверяем, что элемент не имеет атрибут 'data-retried'
+                            if (
+                              !errorAudio.hasAttribute('data-retried') &&
+                              currentQuestion.media?.key
+                            ) {
+                              errorAudio.setAttribute('data-retried', 'true');
                               const newUrl = await refreshPresignedUrl(
                                 currentQuestion.media.key
                               );
@@ -664,7 +675,7 @@ export default function StartOlympiadPage({
                               }
                             }
 
-                            // Если не удалось обновить URL или нет ключа, показываем сообщение об ошибке
+                            // Если это повторная попытка или нет ключа, показываем fallback
                             errorAudio.style.display = 'none';
                             const errorContainer = errorAudio.parentElement;
                             if (errorContainer) {

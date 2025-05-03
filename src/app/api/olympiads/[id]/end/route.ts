@@ -17,7 +17,11 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  console.log(`\n>>> ENTERING END/FINALIZE ROUTE for Olympiad ID: ${params.id} at ${new Date().toISOString()}`);
+  console.log(
+    `\n>>> ENTERING END/FINALIZE ROUTE for Olympiad ID: ${
+      params.id
+    } at ${new Date().toISOString()}`
+  );
   try {
     const userId = await verifyAuth();
     const isAdmin = await verifyAdmin();
@@ -33,7 +37,12 @@ export async function POST(
     const olympiad = await db.query.olympiads.findFirst({
       where: eq(olympiads.id, params.id),
     });
-    console.log('End route: Olympiad data fetched:', olympiad ? `ID: ${olympiad.id}, Creator: ${olympiad.creatorId}, Completed: ${olympiad.isCompleted}` : 'null');
+    console.log(
+      'End route: Olympiad data fetched:',
+      olympiad
+        ? `ID: ${olympiad.id}, Creator: ${olympiad.creatorId}, Completed: ${olympiad.isCompleted}`
+        : 'null'
+    );
 
     if (!olympiad) {
       console.error(`End route: Olympiad not found (ID: ${params.id})`);
@@ -44,7 +53,9 @@ export async function POST(
     }
 
     if (!isAdmin && olympiad.creatorId !== userId) {
-      console.error(`End route: Unauthorized attempt by User ${userId} (not admin or creator ${olympiad.creatorId})`);
+      console.error(
+        `End route: Unauthorized attempt by User ${userId} (not admin or creator ${olympiad.creatorId})`
+      );
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -93,7 +104,9 @@ export async function POST(
       .where(
         eq(participantResults.olympiadId, params.id)
       )) as unknown as ParticipantData[];
-    console.log(`End route: Fetched ${resultsRaw.length} raw participant records.`);
+    console.log(
+      `End route: Fetched ${resultsRaw.length} raw participant records.`
+    );
 
     // Sort results by score (descending)
     const results = [...resultsRaw].sort(
@@ -119,16 +132,22 @@ export async function POST(
     const olympiadPrizes = [...olympiadPrizesRaw].sort(
       (a, b) => a.placement - b.placement
     );
-    console.log(`End route: Fetched and sorted ${olympiadPrizes.length} prizes.`);
+    console.log(
+      `End route: Fetched and sorted ${olympiadPrizes.length} prizes.`
+    );
 
     // Loop through participants: Assign place, generate cert, send email
-    console.log('\n=== Starting Olympiad End/Finalization (Processing Loop) ===');
+    console.log(
+      '\n=== Starting Olympiad End/Finalization (Processing Loop) ==='
+    );
     const processingResults = await Promise.all(
       results.map(async (data: ParticipantData, index) => {
         const place = index + 1;
         const isWinner = place <= 3;
 
-        console.log(`\n=== Processing Participant ${index + 1}/${results.length} ===`);
+        console.log(
+          `\n=== Processing Participant ${index + 1}/${results.length} ===`
+        );
         console.log(`Full Name: ${data.participant_details.fullName}`);
         console.log(`Email: ${data.participant_details.email}`);
         console.log(`Place: ${place}`);
@@ -146,7 +165,12 @@ export async function POST(
             place: place.toString(),
             date: new Date().toLocaleDateString(),
           });
-          console.log('Successfully generated certificate URL:', certificateUrl);
+          console.log(
+            `Successfully generated certificate URL: ${certificateUrl}`
+          );
+
+          // Преобразовываем ключ объекта в формат, который мы сможем использовать с getSignedS3Url
+          certificateUrl = `certificates/${certificateUrl}`;
         } catch (certError) {
           console.error(
             `Failed to generate certificate for participant ${data.participant_details.fullName} (Result ID: ${data.participant_results.id}):`,
@@ -155,7 +179,9 @@ export async function POST(
         }
 
         // Update result with place and certificate URL (even if null)
-        console.log(`Updating participant result ${data.participant_results.id} with place ${place} and certificateUrl ${certificateUrl}`);
+        console.log(
+          `Updating participant result ${data.participant_results.id} with place ${place} and certificateUrl ${certificateUrl}`
+        );
         try {
           await db
             .update(participantResults)
@@ -164,9 +190,14 @@ export async function POST(
               certificateUrl,
             })
             .where(eq(participantResults.id, data.participant_results.id));
-          console.log(`Successfully updated participant result ${data.participant_results.id}`);
+          console.log(
+            `Successfully updated participant result ${data.participant_results.id}`
+          );
         } catch (dbError) {
-          console.error(`Failed to update DB for participant result ${data.participant_results.id}:`, dbError);
+          console.error(
+            `Failed to update DB for participant result ${data.participant_results.id}:`,
+            dbError
+          );
           // Decide if you want to stop or continue if DB update fails
         }
 
@@ -179,7 +210,10 @@ export async function POST(
         };
       })
     );
-    console.log('\n=== Finished Processing Participants (Certificates Generated) ===', processingResults);
+    console.log(
+      '\n=== Finished Processing Participants (Certificates Generated) ===',
+      processingResults
+    );
 
     // Mark olympiad as completed
     console.log(`Marking olympiad ${params.id} as completed...`);
@@ -192,12 +226,14 @@ export async function POST(
       .where(eq(olympiads.id, params.id));
     console.log(`Olympiad ${params.id} marked as completed.`);
 
-    return NextResponse.json({ 
-      message: 'Olympiad ended successfully. Certificates generated (check logs for details). Emails NOT sent.' // Updated message
+    return NextResponse.json({
+      message:
+        'Olympiad ended successfully. Certificates generated (check logs for details). Emails NOT sent.', // Updated message
     });
-
   } catch (error) {
-    console.error(`\n>>> ERROR IN END/FINALIZE ROUTE (Olympiad ID: ${params.id}) <<<`);
+    console.error(
+      `\n>>> ERROR IN END/FINALIZE ROUTE (Olympiad ID: ${params.id}) <<<`
+    );
     console.error('Error ending olympiad:', error);
     return NextResponse.json(
       { message: 'Internal server error during finalization' },

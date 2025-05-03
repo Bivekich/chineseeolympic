@@ -3,6 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import fs from 'fs';
 import path from 'path';
 import { uploadToS3 } from './s3';
+import { getSignedS3Url } from './s3';
 
 // --- Font Setup ---
 const FONT_REGULAR_PATH = path.join(
@@ -17,7 +18,7 @@ const FONT_CHINESE_PATH = path.join(
   process.cwd(),
   'public',
   'fonts',
-  'NotoSansSC-Regular.otf'
+  'NotoSansSC-Regular.ttf'
 );
 const FONT_CHINESE_NAME = 'NotoSansSC';
 
@@ -234,17 +235,20 @@ async function generateDiploma({
         console.log(
           `[generateDiploma] Uploading certificate to S3: ${fileName}`
         );
-        const s3Url = await uploadToS3(
+        const objectKey = await uploadToS3(
           pdfBuffer,
           fileName,
           'application/pdf',
           'certificates'
         );
 
+        // Генерируем presigned URL для доступа к сертификату (срок жизни - 24 часа)
+        const presignedUrl = await getSignedS3Url(objectKey, 24 * 60 * 60);
+
         console.log(
-          `[generateDiploma] Successfully uploaded certificate to S3: ${s3Url}`
+          `[generateDiploma] Successfully uploaded certificate to S3, presigned URL generated: ${presignedUrl}`
         );
-        resolve(s3Url);
+        resolve(objectKey); // Возвращаем ключ объекта, а не URL
       } catch (error) {
         console.error(
           `[generateDiploma] Error uploading certificate to S3:`,

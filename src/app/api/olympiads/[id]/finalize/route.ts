@@ -192,6 +192,9 @@ export async function POST(
             'Successfully generated certificate URL:',
             certificateUrl
           );
+
+          // Преобразовываем ключ объекта в формат, который мы сможем использовать с getSignedS3Url
+          certificateUrl = `certificates/${certificateUrl}`;
         } catch (certError) {
           console.error(
             `Failed to generate certificate for participant ${data.participant_details.fullName} (Result ID: ${data.participant_results.id}):`,
