@@ -14,6 +14,7 @@ import { generateCertificate } from '@/lib/certificates';
 import { sendEmail } from '@/lib/email';
 import path from 'path';
 import fs from 'fs';
+import { getSignedS3Url } from '@/lib/s3';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
@@ -258,23 +259,31 @@ export async function POST(
         const attachments = [];
         let certificateDownloadUrl = '#';
 
-        const certificateFilePath = path.join(
-          process.cwd(),
-          'public',
-          certificateUrl.replace(/^\//, '') // Use the valid certificateUrl
-        );
+        // Получаем presigned URL для доступа к сертификату в S3
+        try {
+          const presignedUrl = await getSignedS3Url(
+            certificateUrl,
+            24 * 60 * 60
+          );
+          certificateDownloadUrl = presignedUrl;
 
-        if (fs.existsSync(certificateFilePath)) {
+          // Добавляем сертификат как вложение, используя URL
           attachments.push({
             filename: certificateFilename,
-            path: certificateFilePath,
+            path: presignedUrl, // Используем URL вместо локального пути
           });
-          certificateDownloadUrl = `${process.env.NEXT_PUBLIC_APP_URL}${certificateUrl}`;
-        } else {
-          console.warn(
-            `Certificate file ${certificateFilePath} not found for email attachment, though URL was generated.`
+
+          console.log(
+            `Successfully added attachment from S3 URL: ${presignedUrl.substring(
+              0,
+              100
+            )}...`
           );
-          // Don't add attachment, link will be non-functional
+        } catch (s3Error) {
+          console.error(
+            `Error generating presigned URL for certificate: ${certificateUrl}`,
+            s3Error
+          );
         }
 
         const emailHtml = `

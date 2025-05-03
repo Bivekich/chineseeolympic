@@ -10,6 +10,7 @@ import { eq, and } from 'drizzle-orm';
 import { verifyAuth, verifyAdmin } from '@/lib/auth';
 import { generateCertificate } from '@/lib/certificates';
 import { sendEmail } from '@/lib/email';
+import { getSignedS3Url } from '@/lib/s3';
 import path from 'path';
 import fs from 'fs';
 

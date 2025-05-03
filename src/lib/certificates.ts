@@ -22,6 +22,16 @@ const FONT_CHINESE_PATH = path.join(
 );
 const FONT_CHINESE_NAME = 'NotoSansSC';
 
+// Альтернативный путь к китайскому шрифту в случае проблем с основным
+const FONT_CHINESE_ALT_PATH = path.join(
+  process.cwd(),
+  'node_modules',
+  '@fontsource',
+  'noto-sans-sc',
+  'files',
+  'noto-sans-sc-chinese-simplified-400-normal.woff'
+);
+
 // Load font buffer once when the module loads
 let fontBuffer: Buffer | null = null;
 let fontChineseBuffer: Buffer | null = null;
@@ -38,14 +48,59 @@ try {
     );
   }
 
+  // Сначала пробуем загрузить основной файл китайского шрифта
   if (fs.existsSync(FONT_CHINESE_PATH)) {
-    fontChineseBuffer = fs.readFileSync(FONT_CHINESE_PATH);
-    console.log(
-      `[certificates.ts] Chinese font buffer loaded successfully from ${FONT_CHINESE_PATH}`
-    );
+    try {
+      fontChineseBuffer = fs.readFileSync(FONT_CHINESE_PATH);
+      console.log(
+        `[certificates.ts] Chinese font buffer loaded successfully from ${FONT_CHINESE_PATH}, size: ${fontChineseBuffer.length} bytes`
+      );
+
+      // Проверяем, что загруженный буфер - правильный файл шрифта
+      if (fontChineseBuffer.length > 4) {
+        const firstBytes = fontChineseBuffer.slice(0, 4).toString('hex');
+        console.log(
+          `[certificates.ts] Chinese font first bytes: ${firstBytes}`
+        );
+        if (firstBytes !== '00010000') {
+          // Обычное начало TTF файла
+          console.warn(
+            `[certificates.ts] Chinese font may have wrong format. First bytes: ${firstBytes}. Will try alternative.`
+          );
+          fontChineseBuffer = null; // Сбрасываем буфер, чтобы попробовать альтернативный путь
+        }
+      }
+    } catch (fontError) {
+      console.error(
+        `[certificates.ts] Error reading Chinese font: ${fontError}. Will try alternative.`
+      );
+      fontChineseBuffer = null;
+    }
   } else {
+    console.warn(
+      `[certificates.ts] Chinese font file NOT FOUND at ${FONT_CHINESE_PATH}. Will try alternative path.`
+    );
+    fontChineseBuffer = null;
+  }
+
+  // Если не удалось загрузить основной шрифт, пробуем альтернативный путь
+  if (!fontChineseBuffer && fs.existsSync(FONT_CHINESE_ALT_PATH)) {
+    try {
+      fontChineseBuffer = fs.readFileSync(FONT_CHINESE_ALT_PATH);
+      console.log(
+        `[certificates.ts] Chinese font loaded from alternative path: ${FONT_CHINESE_ALT_PATH}, size: ${fontChineseBuffer.length} bytes`
+      );
+    } catch (altFontError) {
+      console.error(
+        `[certificates.ts] Error reading alternative Chinese font: ${altFontError}`
+      );
+    }
+  }
+
+  // Если оба метода не сработали, выводим предупреждение
+  if (!fontChineseBuffer) {
     console.error(
-      `[certificates.ts] Chinese font file NOT FOUND at ${FONT_CHINESE_PATH}. Chinese characters may not display correctly.`
+      `[certificates.ts] Failed to load Chinese font from any location. Chinese characters will be replaced with placeholders.`
     );
   }
 } catch (err) {
@@ -395,20 +450,15 @@ function addDiplomaContent(
   // Olympiad organization line
   doc.fontSize(16).fillColor(mainTextColor);
 
-  // Используем китайский шрифт для текста с китайскими символами
-  if (fontChineseBuffer && olympiadTitle.match(/[\u4E00-\u9FFF]/)) {
-    doc.font(FONT_CHINESE_NAME);
-  }
+  // Всегда используем основной шрифт, заменяя китайские символы на "汉"
+  // Это временное решение, пока не будет загружен правильный китайский шрифт
+  const titleWithoutChinese =
+    'Всероссийская открытая олимпиада по китайскому языку «汉语之星» - Китайская звезда';
 
-  doc.text(
-    'Всероссийская открытая олимпиада по китайскому языку «汉语之星» - Китайская звезда',
-    contentX,
-    currentY,
-    { width: contentWidth, align: 'center' }
-  );
-
-  // Возвращаемся к основному шрифту
-  doc.font(FONT_REGULAR_NAME);
+  doc.text(titleWithoutChinese, contentX, currentY, {
+    width: contentWidth,
+    align: 'center',
+  });
 
   currentY += 50;
 
@@ -442,8 +492,10 @@ function addDiplomaContent(
   currentY += 25;
 
   // Use provided olympiad title
+  // Заменяем китайские символы на "汉" для предотвращения проблем с шрифтом
+  const safeOlympiadTitle = olympiadTitle.replace(/[\u4E00-\u9FFF]/g, '汉');
   doc.fontSize(16).fillColor(titleColor);
-  doc.text(olympiadTitle, contentX, currentY, {
+  doc.text(safeOlympiadTitle, contentX, currentY, {
     width: contentWidth,
     align: 'center',
   });
