@@ -122,22 +122,38 @@ export default function Footer() {
           className="pt-8 border-t border-gray-800"
         >
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} 汉语之星. Все права защищены.
-            </p>
-            <div className="flex space-x-6">
-              <Link
-                href="/privacy"
-                className="text-gray-400 hover:text-red-500 text-sm transition-colors"
+            <div className="flex flex-col">
+              <p className="text-gray-400 text-sm">
+                © {new Date().getFullYear()} 汉语之星. Все права защищены.
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                ИП Тришкина Екатерина Васильевна, ОГРНИП 325220200006791, ИНН
+                227102098395
+              </p>
+            </div>
+            <div className="flex flex-col items-end">
+              <div className="flex space-x-6">
+                <Link
+                  href="/privacy"
+                  className="text-gray-400 hover:text-red-500 text-sm transition-colors"
+                >
+                  Политика конфиденциальности
+                </Link>
+                <Link
+                  href="/terms"
+                  className="text-gray-400 hover:text-red-500 text-sm transition-colors"
+                >
+                  Условия использования
+                </Link>
+              </div>
+              <a
+                href="https://biveki.ru"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-500 text-xs mt-2 hover:text-red-500 transition-colors"
               >
-                Политика конфиденциальности
-              </Link>
-              <Link
-                href="/terms"
-                className="text-gray-400 hover:text-red-500 text-sm transition-colors"
-              >
-                Условия использования
-              </Link>
+                Разработка сайтов BivekiGroup
+              </a>
             </div>
           </div>
         </motion.div>
