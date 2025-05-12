@@ -33,8 +33,10 @@ function initializeEmailTransporter() {
   // Create a transporter using SMTP
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT),
-    secure: false, // true for 465, false for other ports
+    port: Number(process.env.SMTP_PORT),
+    // use SSL for port 465, STARTTLS for others
+    secure: Number(process.env.SMTP_PORT) === 465,
+    requireTLS: Number(process.env.SMTP_PORT) === 587,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
