@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth, verifyAdmin } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { olympiads, payments } from '@/lib/db/schema';
+import { olympiads, payments, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const UKASSA_API_KEY = process.env.UKASSA_API_KEY;
 const UKASSA_SHOP_ID = process.env.UKASSA_SHOP_ID;
 const RETURN_URL = process.env.NEXT_PUBLIC_APP_URL;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 export async function POST(
   request: Request,
@@ -27,6 +28,13 @@ export async function POST(
       .select()
       .from(olympiads)
       .where(eq(olympiads.id, params.id))
+      .then((res: any[]) => res[0]);
+
+    // Get user email
+    const user = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(eq(users.id, userId))
       .then((res: any[]) => res[0]);
 
     console.log('Olympiad details:', olympiad); // Debug log
@@ -62,6 +70,24 @@ export async function POST(
           { error: 'Already paid for this olympiad' },
           { status: 400 }
         );
+      }
+
+      // Check for existing pending payment with paymentUrl
+      const pendingPayment = await db
+        .select()
+        .from(payments)
+        .where(
+          eq(payments.userId, userId) &&
+            eq(payments.olympiadId, params.id) &&
+            eq(payments.status, 'pending')
+        )
+        .then((res: any[]) => res[0]);
+
+      if (pendingPayment && pendingPayment.paymentUrl) {
+        console.log('Found pending payment with URL:', pendingPayment);
+        return NextResponse.json({
+          paymentUrl: pendingPayment.paymentUrl,
+        });
       }
     }
 
@@ -113,6 +139,24 @@ export async function POST(
         olympiadId: params.id,
         userId,
       },
+      receipt: {
+        customer: {
+          email: user?.email || 'user@example.com',
+        },
+        items: [
+          {
+            description: `Участие в олимпиаде "${olympiad.title}"`,
+            quantity: '1',
+            amount: {
+              value: (olympiad.price / 100).toFixed(2),
+              currency: 'RUB',
+            },
+            vat_code: 6, // НДС не облагается
+            payment_subject: 'service',
+            payment_mode: 'full_payment',
+          },
+        ],
+      },
     };
 
     console.log('Sending payment request to UKassa:', paymentData);
@@ -126,6 +170,7 @@ export async function POST(
         Authorization: `Basic ${Buffer.from(
           `${UKASSA_SHOP_ID}:${UKASSA_API_KEY}`
         ).toString('base64')}`,
+        'X-Yookassa-Request-Mode': IS_PRODUCTION ? 'production' : 'test',
       },
       body: JSON.stringify(paymentData),
     });
@@ -135,10 +180,25 @@ export async function POST(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('UKassa error response:', errorText);
-      return NextResponse.json(
-        { error: 'Failed to create payment: ' + errorText },
-        { status: 500 }
-      );
+
+      // Try to parse the error details for better reporting
+      try {
+        const errorData = JSON.parse(errorText);
+        console.error('UKassa error details:', errorData);
+        return NextResponse.json(
+          {
+            error: 'Failed to create payment',
+            details: errorData,
+          },
+          { status: 500 }
+        );
+      } catch (parseError) {
+        // If can't parse JSON, return raw text
+        return NextResponse.json(
+          { error: 'Failed to create payment: ' + errorText },
+          { status: 500 }
+        );
+      }
     }
 
     const paymentResponse = await response.json();
@@ -155,6 +215,7 @@ export async function POST(
 
     return NextResponse.json({
       paymentUrl: paymentResponse.confirmation.confirmation_url,
+      isTest: !IS_PRODUCTION,
     });
   } catch (error) {
     console.error('Payment creation error:', error);

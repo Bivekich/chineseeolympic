@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        # Передаем переменные окружения при сборке
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://chinesestar.ru}
+    restart: always
+    ports:
+      - '3001:3000'
+    environment:
+      # База данных
+      DATABASE_URL: ${DATABASE_URL}
+      # ЮКасса
+      UKASSA_API_KEY: ${UKASSA_API_KEY}
+      UKASSA_SHOP_ID: ${UKASSA_SHOP_ID}
+      UKASSA_SECRET_KEY: ${UKASSA_SECRET_KEY}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      # Общие настройки
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://chinesestar.ru}
+      NODE_ENV: production
+    volumes:
+      # Сохраняем загруженные файлы
+      - ./public/uploads:/app/public/uploads
+      - ./public/olympiad-media:/app/public/olympiad-media
+      - ./public/certificates:/app/public/certificates
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

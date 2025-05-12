@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import ChineseLoader from "@/components/ChineseLoader";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import ChineseLoader from '@/components/ChineseLoader';
 
 interface Olympiad {
   id: string;
@@ -14,7 +14,7 @@ interface Olympiad {
   duration: number;
 }
 
-type EducationType = "school" | "university" | "none";
+type EducationType = 'school' | 'university' | 'none';
 
 export default function ParticipateOlympiadPage({
   params,
@@ -28,32 +28,37 @@ export default function ParticipateOlympiadPage({
   const [paymentRequired, setPaymentRequired] = useState(false);
 
   // Form state
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [country, setCountry] = useState("");
-  const [city, setCity] = useState("");
-  const [age, setAge] = useState("");
-  const [educationType, setEducationType] = useState<EducationType>("none");
-  const [grade, setGrade] = useState("");
-  const [institutionName, setInstitutionName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
+  const [age, setAge] = useState('');
+  const [educationType, setEducationType] = useState<EducationType>('none');
+  const [grade, setGrade] = useState('');
+  const [institutionName, setInstitutionName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch(`/api/olympiads/${params.id}`);
         if (!response.ok) {
-          throw new Error("Failed to fetch olympiad");
+          throw new Error('Failed to fetch olympiad');
         }
         const data = await response.json();
-        console.log("Olympiad data:", data);
+        console.log('Olympiad data:', data);
         setOlympiad(data[0]);
         const requiresPayment = data[0].price > 0;
-        console.log("Price:", data[0].price, "Requires payment:", requiresPayment);
+        console.log(
+          'Price:',
+          data[0].price,
+          'Requires payment:',
+          requiresPayment
+        );
         setPaymentRequired(requiresPayment);
       } catch (error) {
-        console.error("Error fetching olympiad:", error);
-        alert("Ошибка при загрузке олимпиады");
+        console.error('Error fetching olympiad:', error);
+        alert('Ошибка при загрузке олимпиады');
       } finally {
         setIsLoading(false);
       }
@@ -68,50 +73,60 @@ export default function ParticipateOlympiadPage({
 
     try {
       // First, register the participant
-      const registerResponse = await fetch(`/api/olympiads/${params.id}/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName,
-          email,
-          country,
-          city,
-          age: parseInt(age),
-          educationType,
-          grade: educationType !== "none" ? grade : undefined,
-          institutionName: educationType !== "none" ? institutionName : undefined,
-          phoneNumber,
-        }),
-      });
+      const registerResponse = await fetch(
+        `/api/olympiads/${params.id}/register`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fullName,
+            email,
+            country,
+            city,
+            age: parseInt(age),
+            educationType,
+            grade: educationType !== 'none' ? grade : undefined,
+            institutionName:
+              educationType !== 'none' ? institutionName : undefined,
+            phoneNumber,
+          }),
+        }
+      );
 
-      if (!registerResponse.ok) {
-        throw new Error("Failed to register");
+      const registerData = await registerResponse.json();
+
+      // Check if already registered (this is not an error for our flow)
+      if (!registerResponse.ok && registerResponse.status !== 400) {
+        throw new Error(registerData.message || 'Failed to register');
       }
 
-      console.log("Registration successful, payment required:", paymentRequired);
+      console.log('Registration verified, payment required:', paymentRequired);
 
       // If payment is required, create payment and redirect to UKassa
       if (paymentRequired) {
-        console.log("Creating payment...");
-        const paymentResponse = await fetch(`/api/olympiads/${params.id}/payment`, {
-          method: "POST",
-        });
+        console.log('Creating payment...');
+        const paymentResponse = await fetch(
+          `/api/olympiads/${params.id}/payment`,
+          {
+            method: 'POST',
+          }
+        );
 
         if (!paymentResponse.ok) {
           const errorData = await paymentResponse.json();
-          console.error("Payment creation failed:", errorData);
-          throw new Error(errorData.error || "Failed to create payment");
+          console.error('Payment creation failed:', errorData);
+          throw new Error(errorData.error || 'Failed to create payment');
         }
 
         const paymentData = await paymentResponse.json();
-        console.log("Payment created, redirecting to:", paymentData.paymentUrl);
-        
+        console.log('Payment created, redirecting to:', paymentData.paymentUrl);
+
         if (!paymentData.paymentUrl) {
-          throw new Error("No payment URL received");
+          throw new Error('No payment URL received');
         }
-        
+
         // Use router.push for client-side navigation when staying within the app
         // Use window.location.href for external URLs (like payment provider)
         window.location.href = paymentData.paymentUrl;
@@ -121,8 +136,8 @@ export default function ParticipateOlympiadPage({
       // If no payment required, redirect to start page
       router.push(`/olympiads/${params.id}/start`);
     } catch (error) {
-      console.error("Error:", error);
-      alert(error instanceof Error ? error.message : "An error occurred");
+      console.error('Error:', error);
+      alert(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setIsSubmitting(false);
     }
@@ -165,7 +180,8 @@ export default function ParticipateOlympiadPage({
                     </p>
                     {olympiad.price > 0 && (
                       <p>
-                        Стоимость участия: {(olympiad.price / 100).toFixed(2)} руб.
+                        Стоимость участия: {(olympiad.price / 100).toFixed(2)}{' '}
+                        руб.
                       </p>
                     )}
                   </div>
@@ -258,7 +274,7 @@ export default function ParticipateOlympiadPage({
                       <input
                         type="radio"
                         value="school"
-                        checked={educationType === "school"}
+                        checked={educationType === 'school'}
                         onChange={(e) =>
                           setEducationType(e.target.value as EducationType)
                         }
@@ -270,7 +286,7 @@ export default function ParticipateOlympiadPage({
                       <input
                         type="radio"
                         value="university"
-                        checked={educationType === "university"}
+                        checked={educationType === 'university'}
                         onChange={(e) =>
                           setEducationType(e.target.value as EducationType)
                         }
@@ -282,7 +298,7 @@ export default function ParticipateOlympiadPage({
                       <input
                         type="radio"
                         value="none"
-                        checked={educationType === "none"}
+                        checked={educationType === 'none'}
                         onChange={(e) =>
                           setEducationType(e.target.value as EducationType)
                         }
@@ -294,11 +310,11 @@ export default function ParticipateOlympiadPage({
                 </div>
 
                 {/* Conditional Fields for School/University */}
-                {educationType !== "none" && (
+                {educationType !== 'none' && (
                   <div className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium text-red-200 mb-2">
-                        {educationType === "school" ? "Класс" : "Курс"}
+                        {educationType === 'school' ? 'Класс' : 'Курс'}
                       </label>
                       <input
                         type="text"
@@ -306,18 +322,18 @@ export default function ParticipateOlympiadPage({
                         onChange={(e) => setGrade(e.target.value)}
                         className="w-full px-4 py-3 bg-white/10 border border-red-200/10 rounded-lg text-white placeholder-red-200/50 focus:outline-none focus:ring-2 focus:ring-red-500"
                         placeholder={
-                          educationType === "school"
-                            ? "Например: 11"
-                            : "Например: 2"
+                          educationType === 'school'
+                            ? 'Например: 11'
+                            : 'Например: 2'
                         }
                         required
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-red-200 mb-2">
-                        {educationType === "school"
-                          ? "Название школы"
-                          : "Название университета"}
+                        {educationType === 'school'
+                          ? 'Название школы'
+                          : 'Название университета'}
                       </label>
                       <input
                         type="text"
@@ -362,10 +378,10 @@ export default function ParticipateOlympiadPage({
                 className="px-6 py-3 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-800 focus:ring-red-500 transition-colors disabled:opacity-50"
               >
                 {isSubmitting
-                  ? "Подождите..."
+                  ? 'Подождите...'
                   : paymentRequired
-                  ? "Продолжить к оплате"
-                  : "Начать олимпиаду"}
+                  ? 'Продолжить к оплате'
+                  : 'Начать олимпиаду'}
               </button>
             </div>
           </form>

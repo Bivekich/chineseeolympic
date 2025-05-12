@@ -29,6 +29,7 @@ try {
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'standalone',
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
