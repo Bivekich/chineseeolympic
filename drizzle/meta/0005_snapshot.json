@@ -1,10 +1,8 @@
 {
-  "id": "69676dec-7514-4327-b876-1ff455c63112",
-  "prevId": "d8d24115-b8df-4cf3-856d-d0c44092c226",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "olympiads": {
+    "public.olympiads": {
       "name": "olympiads",
       "schema": "",
       "columns": {
@@ -125,21 +123,24 @@
         "olympiads_creator_id_users_id_fk": {
           "name": "olympiads_creator_id_users_id_fk",
           "tableFrom": "olympiads",
-          "tableTo": "users",
           "columnsFrom": [
             "creator_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "participant_details": {
+    "public.participant_details": {
       "name": "participant_details",
       "schema": "",
       "columns": {
@@ -228,34 +229,37 @@
         "participant_details_user_id_users_id_fk": {
           "name": "participant_details_user_id_users_id_fk",
           "tableFrom": "participant_details",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "participant_details_olympiad_id_olympiads_id_fk": {
           "name": "participant_details_olympiad_id_olympiads_id_fk",
           "tableFrom": "participant_details",
-          "tableTo": "olympiads",
           "columnsFrom": [
             "olympiad_id"
           ],
+          "tableTo": "olympiads",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "participant_results": {
+    "public.participant_results": {
       "name": "participant_results",
       "schema": "",
       "columns": {
@@ -314,34 +318,37 @@
         "participant_results_user_id_users_id_fk": {
           "name": "participant_results_user_id_users_id_fk",
           "tableFrom": "participant_results",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "participant_results_olympiad_id_olympiads_id_fk": {
           "name": "participant_results_olympiad_id_olympiads_id_fk",
           "tableFrom": "participant_results",
-          "tableTo": "olympiads",
           "columnsFrom": [
             "olympiad_id"
           ],
+          "tableTo": "olympiads",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "payments": {
+    "public.payments": {
       "name": "payments",
       "schema": "",
       "columns": {
@@ -408,34 +415,37 @@
         "payments_user_id_users_id_fk": {
           "name": "payments_user_id_users_id_fk",
           "tableFrom": "payments",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "payments_olympiad_id_olympiads_id_fk": {
           "name": "payments_olympiad_id_olympiads_id_fk",
           "tableFrom": "payments",
-          "tableTo": "olympiads",
           "columnsFrom": [
             "olympiad_id"
           ],
+          "tableTo": "olympiads",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "prizes": {
+    "public.prizes": {
       "name": "prizes",
       "schema": "",
       "columns": {
@@ -482,21 +492,24 @@
         "prizes_olympiad_id_olympiads_id_fk": {
           "name": "prizes_olympiad_id_olympiads_id_fk",
           "tableFrom": "prizes",
-          "tableTo": "olympiads",
           "columnsFrom": [
             "olympiad_id"
           ],
+          "tableTo": "olympiads",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "questions": {
+    "public.questions": {
       "name": "questions",
       "schema": "",
       "columns": {
@@ -562,21 +575,24 @@
         "questions_olympiad_id_olympiads_id_fk": {
           "name": "questions_olympiad_id_olympiads_id_fk",
           "tableFrom": "questions",
-          "tableTo": "olympiads",
           "columnsFrom": [
             "olympiad_id"
           ],
+          "tableTo": "olympiads",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "users": {
+    "public.users": {
       "name": "users",
       "schema": "",
       "columns": {
@@ -651,19 +667,28 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {},
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "69676dec-7514-4327-b876-1ff455c63112",
+  "prevId": "d8d24115-b8df-4cf3-856d-d0c44092c226",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }
