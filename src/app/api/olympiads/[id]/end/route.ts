@@ -16,14 +16,15 @@ import fs from 'fs';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log(
-    `\n>>> ENTERING END/FINALIZE ROUTE for Olympiad ID: ${
-      params.id
-    } at ${new Date().toISOString()}`
-  );
   try {
+    const { id } = await params;
+    console.log(
+      `\n>>> ENTERING END/FINALIZE ROUTE for Olympiad ID: ${
+        id
+      } at ${new Date().toISOString()}`
+    );
     const userId = await verifyAuth();
     const isAdmin = await verifyAdmin();
     console.log(`End route: User ID: ${userId}, Is Admin: ${isAdmin}`);
@@ -36,7 +37,7 @@ export async function POST(
     // Get the olympiad
     console.log('End route: Fetching olympiad data...');
     const olympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
     console.log(
       'End route: Olympiad data fetched:',
@@ -46,7 +47,7 @@ export async function POST(
     );
 
     if (!olympiad) {
-      console.error(`End route: Olympiad not found (ID: ${params.id})`);
+      console.error(`End route: Olympiad not found (ID: ${id})`);
       return NextResponse.json(
         { message: 'Olympiad not found' },
         { status: 404 }
@@ -61,7 +62,7 @@ export async function POST(
     }
 
     if (olympiad.isCompleted) {
-      console.log(`End route: Olympiad ${params.id} is already completed.`);
+      console.log(`End route: Olympiad ${id} is already completed.`);
       return NextResponse.json(
         { message: 'Olympiad is already completed' },
         { status: 400 }
@@ -103,7 +104,7 @@ export async function POST(
         )
       )
       .where(
-        eq(participantResults.olympiadId, params.id)
+        eq(participantResults.olympiadId, id)
       )) as unknown as ParticipantData[];
     console.log(
       `End route: Fetched ${resultsRaw.length} raw participant records.`
@@ -129,7 +130,7 @@ export async function POST(
     const olympiadPrizesRaw = (await db
       .select()
       .from(prizes)
-      .where(eq(prizes.olympiadId, params.id))) as Prize[];
+      .where(eq(prizes.olympiadId, id))) as Prize[];
     const olympiadPrizes = [...olympiadPrizesRaw].sort(
       (a, b) => a.placement - b.placement
     );
@@ -217,15 +218,15 @@ export async function POST(
     );
 
     // Mark olympiad as completed
-    console.log(`Marking olympiad ${params.id} as completed...`);
+    console.log(`Marking olympiad ${id} as completed...`);
     await db
       .update(olympiads)
       .set({
         isCompleted: true,
         updatedAt: new Date(),
       })
-      .where(eq(olympiads.id, params.id));
-    console.log(`Olympiad ${params.id} marked as completed.`);
+      .where(eq(olympiads.id, id));
+    console.log(`Olympiad ${id} marked as completed.`);
 
     return NextResponse.json({
       message:
@@ -233,7 +234,7 @@ export async function POST(
     });
   } catch (error) {
     console.error(
-      `\n>>> ERROR IN END/FINALIZE ROUTE (Olympiad ID: ${params.id}) <<<`
+      `\n>>> ERROR IN END/FINALIZE ROUTE <<<`
     );
     console.error('Error ending olympiad:', error);
     return NextResponse.json(

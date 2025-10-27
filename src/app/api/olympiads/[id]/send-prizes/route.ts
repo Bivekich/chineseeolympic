@@ -14,9 +14,10 @@ import fs from 'fs'; // Import fs module
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -26,7 +27,7 @@ export async function POST(
 
     // Get the olympiad
     const olympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
 
     if (!olympiad) {
@@ -55,7 +56,7 @@ export async function POST(
     // Then get the participant result using the participant's userId
     const result = await db.query.participantResults.findFirst({
       where: and(
-        eq(participantResults.olympiadId, params.id),
+        eq(participantResults.olympiadId, id),
         eq(participantResults.userId, participant.userId)
       ),
     });
@@ -70,7 +71,7 @@ export async function POST(
     // Get the prize based on participant's place
     const prize = await db.query.prizes.findFirst({
       where: and(
-        eq(prizes.olympiadId, params.id),
+        eq(prizes.olympiadId, id),
         eq(prizes.placement, parseInt(result.place || '0'))
       ),
     });

@@ -19,7 +19,7 @@ import { getSignedS3Url } from '@/lib/s3';
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 async function getUserId() {
-  const token = cookies().get('auth-token')?.value;
+  const token = (await cookies()).get('auth-token')?.value;
   if (!token) return null;
 
   try {
@@ -32,14 +32,15 @@ async function getUserId() {
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log(
-    `\n>>> ENTERING FINALIZE ROUTE for Olympiad ID: ${
-      params.id
-    } at ${new Date().toISOString()}`
-  );
   try {
+    const { id } = await params;
+    console.log(
+      `\n>>> ENTERING FINALIZE ROUTE for Olympiad ID: ${
+        id
+      } at ${new Date().toISOString()}`
+    );
     const userId = await getUserId();
     console.log(`Finalize route: User ID fetched: ${userId}`);
     if (!userId) {
@@ -50,7 +51,7 @@ export async function POST(
     // Get olympiad and verify ownership
     console.log('Finalize route: Fetching olympiad data...');
     const olympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
     console.log(
       'Finalize route: Olympiad data fetched:',
@@ -60,7 +61,7 @@ export async function POST(
     );
 
     if (!olympiad) {
-      console.error(`Finalize route: Olympiad not found (ID: ${params.id})`);
+      console.error(`Finalize route: Olympiad not found (ID: ${id})`);
       return NextResponse.json(
         { message: 'Олимпиада не найдена' },
         { status: 404 }
@@ -113,7 +114,7 @@ export async function POST(
         )
       )
       .where(
-        eq(participantResults.olympiadId, params.id)
+        eq(participantResults.olympiadId, id)
       )) as unknown as ParticipantData[];
     console.log(
       `Finalize route: Fetched ${resultsRaw.length} raw participant records.`
@@ -152,7 +153,7 @@ export async function POST(
     const olympiadPrizesRaw = (await db
       .select()
       .from(prizes)
-      .where(eq(prizes.olympiadId, params.id))) as Prize[];
+      .where(eq(prizes.olympiadId, id))) as Prize[];
 
     // Сортируем призы вручную
     const olympiadPrizes = [...olympiadPrizesRaw].sort(
@@ -388,12 +389,12 @@ export async function POST(
     await db
       .update(olympiads)
       .set({ isCompleted: true })
-      .where(eq(olympiads.id, params.id));
+      .where(eq(olympiads.id, id));
 
     return NextResponse.json(updatedResults);
   } catch (error) {
     console.error(
-      `\n>>> ERROR IN FINALIZE ROUTE (Olympiad ID: ${params.id}) <<<`
+      `\n>>> ERROR IN FINALIZE ROUTE <<<`
     );
     console.error('Error finalizing olympiad:', error);
     return NextResponse.json(

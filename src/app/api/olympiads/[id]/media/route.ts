@@ -8,11 +8,12 @@ import { uploadToS3, getSignedS3Url } from '@/lib/s3';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log(`[media/route] Starting file upload for olympiad ${params.id}`);
-
   try {
+    const { id } = await params;
+    console.log(`[media/route] Starting file upload for olympiad ${id}`);
+
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -20,7 +21,7 @@ export async function POST(
 
     // Verify olympiad ownership
     const olympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
 
     if (!olympiad) {
@@ -124,9 +125,10 @@ export async function POST(
 // Новый endpoint для обновления presigned URL для объекта
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await params; // Await params even though we don't use id in this endpoint
     // Проверка авторизации
     const userId = await verifyAuth();
     if (!userId) {

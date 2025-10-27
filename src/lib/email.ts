@@ -39,12 +39,14 @@ function initializeEmailTransporter() {
 
   const port = parseInt(process.env.SMTP_PORT);
   const secure = port === 465; // Use SSL for port 465
+  const requireTLS = port === 587; // Use STARTTLS for port 587
 
   console.log('Initializing email transporter with config:', {
     host: process.env.SMTP_HOST,
     port: port,
     user: process.env.SMTP_USER,
     secure: secure,
+    requireTLS: requireTLS,
   });
 
   // Create a transporter using SMTP
@@ -53,6 +55,7 @@ function initializeEmailTransporter() {
     host: process.env.SMTP_HOST,
     port: port,
     secure: secure, // true for 465, false for other ports
+    requireTLS: requireTLS, // true for 587 (STARTTLS)
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,

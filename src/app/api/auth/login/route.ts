@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       .sign(JWT_SECRET);
 
     // Set cookie
-    cookies().set("auth-token", token, {
+    (await cookies()).set("auth-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

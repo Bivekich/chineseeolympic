@@ -13,9 +13,10 @@ import { verifyAuth } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -25,7 +26,7 @@ export async function GET(
     const olympiad = await db
       .select()
       .from(olympiads)
-      .where(eq(olympiads.id, params.id))
+      .where(eq(olympiads.id, id))
       .limit(1);
 
     if (!olympiad || olympiad.length === 0) {
@@ -69,9 +70,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -81,7 +83,7 @@ export async function PUT(
     const existingOlympiad = await db
       .select()
       .from(olympiads)
-      .where(eq(olympiads.id, params.id))
+      .where(eq(olympiads.id, id))
       .limit(1);
 
     if (!existingOlympiad || existingOlympiad.length === 0) {
@@ -125,7 +127,7 @@ export async function PUT(
         price,
         updatedAt: new Date(),
       })
-      .where(eq(olympiads.id, params.id))
+      .where(eq(olympiads.id, id))
       .returning();
 
     return NextResponse.json(updatedOlympiad);
@@ -140,11 +142,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("Starting olympiad deletion process for ID:", params.id);
-    
+    const { id } = await params;
+    console.log("Starting olympiad deletion process for ID:", id);
+
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -152,7 +155,7 @@ export async function DELETE(
 
     // First check if the olympiad exists and if the user is the creator
     const existingOlympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
 
     console.log("Found olympiad:", existingOlympiad);
@@ -176,42 +179,42 @@ export async function DELETE(
         // Delete participant details first
         const deletedDetails = await tx
           .delete(participantDetails)
-          .where(eq(participantDetails.olympiadId, params.id))
+          .where(eq(participantDetails.olympiadId, id))
           .returning();
         console.log("Deleted participant details:", deletedDetails.length);
 
         // Delete participant results
         const deletedResults = await tx
           .delete(participantResults)
-          .where(eq(participantResults.olympiadId, params.id))
+          .where(eq(participantResults.olympiadId, id))
           .returning();
         console.log("Deleted participant results:", deletedResults.length);
 
         // Delete questions
         const deletedQuestions = await tx
           .delete(questions)
-          .where(eq(questions.olympiadId, params.id))
+          .where(eq(questions.olympiadId, id))
           .returning();
         console.log("Deleted questions:", deletedQuestions.length);
 
         // Delete prizes
         const deletedPrizes = await tx
           .delete(prizes)
-          .where(eq(prizes.olympiadId, params.id))
+          .where(eq(prizes.olympiadId, id))
           .returning();
         console.log("Deleted prizes:", deletedPrizes.length);
 
         // Delete payments
         const deletedPayments = await tx
           .delete(payments)
-          .where(eq(payments.olympiadId, params.id))
+          .where(eq(payments.olympiadId, id))
           .returning();
         console.log("Deleted payments:", deletedPayments.length);
 
         // Finally, delete the olympiad
         const deletedOlympiad = await tx
           .delete(olympiads)
-          .where(eq(olympiads.id, params.id))
+          .where(eq(olympiads.id, id))
           .returning();
         console.log("Deleted olympiad:", deletedOlympiad.length);
       });

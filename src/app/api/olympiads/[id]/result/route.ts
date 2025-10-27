@@ -7,9 +7,10 @@ import { getSignedS3Url } from '@/lib/s3';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -26,7 +27,7 @@ export async function GET(
       .where(
         and(
           eq(participantResults.userId, userId),
-          eq(participantResults.olympiadId, params.id)
+          eq(participantResults.olympiadId, id)
         )
       )
       .limit(1);

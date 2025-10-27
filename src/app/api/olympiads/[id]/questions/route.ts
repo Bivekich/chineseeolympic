@@ -7,16 +7,17 @@ import { getSignedS3Url } from '@/lib/s3';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const olympiadQuestions = await db.query.questions.findMany({
-      where: eq(questions.olympiadId, params.id),
+      where: eq(questions.olympiadId, id),
     });
 
     // Parse JSON strings back into arrays/objects
@@ -71,9 +72,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -158,7 +160,7 @@ export async function PUT(
 
     // Verify olympiad ownership
     const olympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
 
     if (!olympiad) {
@@ -175,12 +177,12 @@ export async function PUT(
     // Start a transaction
     await db.transaction(async (tx) => {
       // Delete existing questions
-      await tx.delete(questions).where(eq(questions.olympiadId, params.id));
+      await tx.delete(questions).where(eq(questions.olympiadId, id));
 
       // Insert new questions
       await tx.insert(questions).values(
         newQuestions.map((q: any) => ({
-          olympiadId: params.id,
+          olympiadId: id,
           question: q.question,
           type: q.type,
           correctAnswer: q.correctAnswer,
@@ -198,7 +200,7 @@ export async function PUT(
         .set({
           hasQuestions: true,
         })
-        .where(eq(olympiads.id, params.id));
+        .where(eq(olympiads.id, id));
     });
 
     return NextResponse.json({ message: 'Questions updated successfully' });

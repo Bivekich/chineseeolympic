@@ -10,9 +10,10 @@ import { verifyAuth, verifyAdmin } from '@/lib/auth';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     const isAdmin = await verifyAdmin();
 
@@ -24,7 +25,7 @@ export async function GET(
     const olympiad = await db
       .select()
       .from(olympiads)
-      .where(eq(olympiads.id, params.id))
+      .where(eq(olympiads.id, id))
       .then((res: any[]) => res[0]);
 
     if (!olympiad) {
@@ -54,13 +55,13 @@ export async function GET(
         phoneNumber: participantDetails.phoneNumber,
       })
       .from(participantDetails)
-      .where(eq(participantDetails.olympiadId, params.id));
+      .where(eq(participantDetails.olympiadId, id));
 
     // Then get all results for this olympiad
     const results = await db
       .select()
       .from(participantResults)
-      .where(eq(participantResults.olympiadId, params.id));
+      .where(eq(participantResults.olympiadId, id));
 
     // Create a map of userId to their latest result
     const latestResultsByUser = new Map();

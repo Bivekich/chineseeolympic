@@ -6,7 +6,7 @@ import { verifyAuth } from '@/lib/auth';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await verifyAuth();
@@ -15,6 +15,7 @@ export async function PUT(
     }
 
     const { promoCodes } = await request.json();
+    const { id } = await params;
 
     // Validate promo codes
     if (!Array.isArray(promoCodes)) {
@@ -26,7 +27,7 @@ export async function PUT(
 
     // Verify olympiad ownership and completion
     const olympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
 
     if (!olympiad) {
@@ -60,7 +61,7 @@ export async function PUT(
     const existingPrizes = (await db
       .select()
       .from(prizes)
-      .where(eq(prizes.olympiadId, params.id))) as Prize[];
+      .where(eq(prizes.olympiadId, id))) as Prize[];
 
     // Sort prizes by placement after query
     const sortedPrizes = [...existingPrizes].sort(

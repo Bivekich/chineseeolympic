@@ -9,10 +9,12 @@ export async function POST(request: Request) {
     console.log('Attempting to send test email to:', email);
 
     // Create test transporter to verify connection
+    const port = parseInt(process.env.SMTP_PORT || '587');
     const testTransporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '465'),
-      secure: true,
+      port: port,
+      secure: port === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+      requireTLS: port === 587, // true for 587 (STARTTLS)
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,

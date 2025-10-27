@@ -11,9 +11,10 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check if user is authenticated
     const userId = await verifyAuth();
     const isAdmin = await verifyAdmin();
@@ -21,13 +22,13 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('Creating payment for olympiad:', params.id); // Debug log
+    console.log('Creating payment for olympiad:', id); // Debug log
 
     // Get olympiad details
     const olympiad = await db
       .select()
       .from(olympiads)
-      .where(eq(olympiads.id, params.id))
+      .where(eq(olympiads.id, id))
       .then((res: any[]) => res[0]);
 
     // Get user email
@@ -60,7 +61,7 @@ export async function POST(
         .from(payments)
         .where(
           eq(payments.userId, userId) &&
-            eq(payments.olympiadId, params.id) &&
+            eq(payments.olympiadId, id) &&
             eq(payments.status, 'completed')
         )
         .then((res: any[]) => res[0]);
@@ -78,7 +79,7 @@ export async function POST(
         .from(payments)
         .where(
           eq(payments.userId, userId) &&
-            eq(payments.olympiadId, params.id) &&
+            eq(payments.olympiadId, id) &&
             eq(payments.status, 'pending')
         )
         .then((res: any[]) => res[0]);
@@ -96,13 +97,13 @@ export async function POST(
       'Creating payment record with userId:',
       userId,
       'olympiadId:',
-      params.id
+      id
     );
     const [payment] = await db
       .insert(payments)
       .values({
         userId,
-        olympiadId: params.id,
+        olympiadId: id,
         amount: olympiad.price,
         status: 'pending',
       })
@@ -131,12 +132,12 @@ export async function POST(
       capture: true,
       confirmation: {
         type: 'redirect',
-        return_url: `${RETURN_URL}/olympiads/${params.id}/start`,
+        return_url: `${RETURN_URL}/olympiads/${id}/start`,
       },
       description: `Участие в олимпиаде "${olympiad.title}"`,
       metadata: {
         paymentId: payment.id,
-        olympiadId: params.id,
+        olympiadId: id,
         userId,
       },
       receipt: {
@@ -166,7 +167,7 @@ export async function POST(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Idempotence-Key': `${userId}-${params.id}-${Date.now()}`,
+        'Idempotence-Key': `${userId}-${id}-${Date.now()}`,
         Authorization: `Basic ${Buffer.from(
           `${UKASSA_SHOP_ID}:${UKASSA_API_KEY}`
         ).toString('base64')}`,
@@ -233,9 +234,10 @@ export async function POST(
 // Webhook endpoint to handle payment status updates
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await params; // Await params even though we don't use id in this endpoint
     const signature = request.headers.get('X-Deliakdessa-Signature');
     if (!signature || signature !== process.env.DELIAKDESSA_WEBHOOK_SECRET) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

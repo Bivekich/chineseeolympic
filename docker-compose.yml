@@ -21,6 +21,12 @@ services:
       UKASSA_SECRET_KEY: ${UKASSA_SECRET_KEY}
       # JWT
       JWT_SECRET: ${JWT_SECRET}
+      # SMTP Email
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SENDER_EMAIL: ${SENDER_EMAIL}
       # Общие настройки
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://chinesestar.ru}
       NODE_ENV: production

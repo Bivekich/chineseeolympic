@@ -6,16 +6,17 @@ import { verifyAuth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const olympiadPrizes = await db.query.prizes.findMany({
-      where: eq(prizes.olympiadId, params.id),
+      where: eq(prizes.olympiadId, id),
       orderBy: (fields: any) => fields.placement,
     });
 
@@ -31,9 +32,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -61,7 +63,7 @@ export async function PUT(
 
     // Verify olympiad ownership
     const olympiad = await db.query.olympiads.findFirst({
-      where: eq(olympiads.id, params.id),
+      where: eq(olympiads.id, id),
     });
 
     if (!olympiad) {
@@ -78,12 +80,12 @@ export async function PUT(
     // Start a transaction
     await db.transaction(async (tx: any) => {
       // Delete existing prizes
-      await tx.delete(prizes).where(eq(prizes.olympiadId, params.id));
+      await tx.delete(prizes).where(eq(prizes.olympiadId, id));
 
       // Insert new prizes
       await tx.insert(prizes).values(
         newPrizes.map((prize: any) => ({
-          olympiadId: params.id,
+          olympiadId: id,
           placement: prize.placement,
           promoCode: prize.promoCode || null, // Make promoCode optional
           description: prize.description,
@@ -98,14 +100,14 @@ export async function PUT(
             isDraft: false,
             hasPrizes: true,
           })
-          .where(eq(olympiads.id, params.id));
+          .where(eq(olympiads.id, id));
       } else {
         await tx
           .update(olympiads)
           .set({
             hasPrizes: true,
           })
-          .where(eq(olympiads.id, params.id));
+          .where(eq(olympiads.id, id));
       }
     });
 

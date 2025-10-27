@@ -6,9 +6,10 @@ import { verifyAuth } from '@/lib/auth';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     // Only the creator should be able to reopen their olympiad
     if (!userId) {
@@ -19,7 +20,7 @@ export async function POST(
     const olympiad = await db
       .select()
       .from(olympiads)
-      .where(eq(olympiads.id, params.id))
+      .where(eq(olympiads.id, id))
       .then((res: any[]) => res[0]);
 
     if (!olympiad) {
@@ -49,7 +50,7 @@ export async function POST(
         isCompleted: false,
         updatedAt: new Date(),
       })
-      .where(eq(olympiads.id, params.id));
+      .where(eq(olympiads.id, id));
 
     return NextResponse.json({ message: 'Olympiad reopened successfully' });
 

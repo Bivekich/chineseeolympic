@@ -6,9 +6,10 @@ import { and, eq } from 'drizzle-orm';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     const isAdmin = await verifyAdmin();
     if (!userId) {
@@ -52,7 +53,7 @@ export async function POST(
         .where(
           and(
             eq(participantDetails.userId, userId),
-            eq(participantDetails.olympiadId, params.id)
+            eq(participantDetails.olympiadId, id)
           )
         )
         .then((res: any[]) => res[0]);
@@ -70,7 +71,7 @@ export async function POST(
       .insert(participantDetails)
       .values({
         userId,
-        olympiadId: params.id,
+        olympiadId: id,
         fullName,
         email,
         country,

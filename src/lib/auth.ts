@@ -19,7 +19,7 @@ export async function createToken(userId: string) {
       .setExpirationTime('24h')
       .sign(JWT_SECRET);
 
-    cookies().set(AUTH_COOKIE, token, {
+    (await cookies()).set(AUTH_COOKIE, token, {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
@@ -41,7 +41,7 @@ export async function createToken(userId: string) {
     .setExpirationTime('24h')
     .sign(JWT_SECRET);
 
-  cookies().set(AUTH_COOKIE, token, {
+  (await cookies()).set(AUTH_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -57,7 +57,7 @@ export async function verifyAuth() {
     return 'dev-user';
   }
 
-  const token = cookies().get(AUTH_COOKIE)?.value;
+  const token = (await cookies()).get(AUTH_COOKIE)?.value;
   if (!token) return null;
 
   try {
@@ -74,7 +74,7 @@ export async function verifyAdmin() {
     return true;
   }
 
-  const token = cookies().get(AUTH_COOKIE)?.value;
+  const token = (await cookies()).get(AUTH_COOKIE)?.value;
   if (!token) return false;
 
   try {
@@ -86,5 +86,5 @@ export async function verifyAdmin() {
 }
 
 export async function removeAuth() {
-  cookies().delete(AUTH_COOKIE);
+  (await cookies()).delete(AUTH_COOKIE);
 }

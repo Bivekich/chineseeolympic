@@ -6,9 +6,10 @@ import { eq, and } from 'drizzle-orm';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const userId = await verifyAuth();
     if (!userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -20,7 +21,7 @@ export async function POST(
     const olympiad = await db
       .select()
       .from(olympiads)
-      .where(eq(olympiads.id, params.id))
+      .where(eq(olympiads.id, id))
       .then((res: any[]) => res[0]);
 
     if (!olympiad) {
@@ -34,7 +35,7 @@ export async function POST(
     let olympiadQuestions = await db
       .select()
       .from(questions)
-      .where(eq(questions.olympiadId, params.id));
+      .where(eq(questions.olympiadId, id));
 
     // If olympiad has questionsPerParticipant set, we need to determine which questions
     // this user actually received. We can do this by looking at their answers.
@@ -142,7 +143,7 @@ export async function POST(
       .where(
         and(
           eq(participantResults.userId, userId),
-          eq(participantResults.olympiadId, params.id)
+          eq(participantResults.olympiadId, id)
         )
       )
       .then((res: any[]) => res[0]);
@@ -165,7 +166,7 @@ export async function POST(
         .insert(participantResults)
         .values({
           userId,
-          olympiadId: params.id,
+          olympiadId: id,
           score: score.toString(),
           answers: JSON.stringify(answers),
           completedAt: now,
