@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ChineseLoader from '@/components/ChineseLoader';
 interface MatchingPair {
@@ -42,8 +42,9 @@ interface Olympiad {
 export default function AddQuestionsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -55,8 +56,8 @@ export default function AddQuestionsPage({
       try {
         // Fetch both olympiad and questions data in parallel
         const [olympiadResponse, questionsResponse] = await Promise.all([
-          fetch(`/api/olympiads/${params.id}`),
-          fetch(`/api/olympiads/${params.id}/questions`),
+          fetch(`/api/olympiads/${id}`),
+          fetch(`/api/olympiads/${id}/questions`),
         ]);
 
         if (!olympiadResponse.ok) {
@@ -84,7 +85,7 @@ export default function AddQuestionsPage({
     };
 
     fetchOlympiad();
-  }, [params.id]);
+  }, [id]);
 
   // Проверяем, есть ли зарегистрированные участники, если олимпиада не черновик
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function AddQuestionsPage({
       if (olympiad && !olympiad.isDraft) {
         try {
           const response = await fetch(
-            `/api/olympiads/${params.id}/participants`
+            `/api/olympiads/${id}/participants`
           );
           if (response.ok) {
             const data = await response.json();
@@ -114,7 +115,7 @@ export default function AddQuestionsPage({
     if (olympiad) {
       checkParticipants();
     }
-  }, [olympiad, params.id]);
+  }, [olympiad, id]);
 
   const handleQuestionChange = (
     index: number,
@@ -254,7 +255,7 @@ export default function AddQuestionsPage({
       console.log(
         `Uploading file for question ${questionIndex}: ${file.name}, size: ${file.size} bytes, type: ${file.type}`
       );
-      const response = await fetch(`/api/olympiads/${params.id}/media`, {
+      const response = await fetch(`/api/olympiads/${id}/media`, {
         method: 'POST',
         body: formData,
       });
@@ -312,7 +313,7 @@ URL для доступа действителен в течение 24 часо
 
     try {
       const response = await fetch(
-        `/api/olympiads/${params.id}/media?key=${encodeURIComponent(objectKey)}`
+        `/api/olympiads/${id}/media?key=${encodeURIComponent(objectKey)}`
       );
       if (!response.ok) {
         throw new Error('Failed to refresh presigned URL');
@@ -362,7 +363,7 @@ URL для доступа действителен в течение 24 часо
     }
 
     try {
-      const response = await fetch(`/api/olympiads/${params.id}/questions`, {
+      const response = await fetch(`/api/olympiads/${id}/questions`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -833,7 +834,7 @@ URL для доступа действителен в течение 24 часо
                     onClick={async () => {
                       const isSuccess = await saveQuestions(false);
                       if (isSuccess) {
-                        router.push(`/olympiads/${params.id}/prizes`);
+                        router.push(`/olympiads/${id}/prizes`);
                       }
                     }}
                     disabled={isSaving}
@@ -847,7 +848,7 @@ URL для доступа действителен в течение 24 часо
                   <button
                     type="button"
                     onClick={() =>
-                      router.push(`/olympiads/${params.id}/manage`)
+                      router.push(`/olympiads/${id}/manage`)
                     }
                     className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                   >

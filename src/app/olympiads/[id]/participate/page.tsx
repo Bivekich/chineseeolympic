@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ChineseLoader from '@/components/ChineseLoader';
 
@@ -19,8 +19,9 @@ type EducationType = 'school' | 'university' | 'none';
 export default function ParticipateOlympiadPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +42,7 @@ export default function ParticipateOlympiadPage({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`/api/olympiads/${params.id}`);
+        const response = await fetch(`/api/olympiads/${id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch olympiad');
         }
@@ -65,7 +66,7 @@ export default function ParticipateOlympiadPage({
     };
 
     fetchData();
-  }, [params.id]);
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +75,7 @@ export default function ParticipateOlympiadPage({
     try {
       // First, register the participant
       const registerResponse = await fetch(
-        `/api/olympiads/${params.id}/register`,
+        `/api/olympiads/${id}/register`,
         {
           method: 'POST',
           headers: {
@@ -108,7 +109,7 @@ export default function ParticipateOlympiadPage({
       if (paymentRequired) {
         console.log('Creating payment...');
         const paymentResponse = await fetch(
-          `/api/olympiads/${params.id}/payment`,
+          `/api/olympiads/${id}/payment`,
           {
             method: 'POST',
           }
@@ -134,7 +135,7 @@ export default function ParticipateOlympiadPage({
       }
 
       // If no payment required, redirect to start page
-      router.push(`/olympiads/${params.id}/start`);
+      router.push(`/olympiads/${id}/start`);
     } catch (error) {
       console.error('Error:', error);
       alert(error instanceof Error ? error.message : 'An error occurred');

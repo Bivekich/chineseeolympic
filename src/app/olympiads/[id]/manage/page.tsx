@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ChineseLoader from '@/components/ChineseLoader';
 
@@ -133,8 +133,9 @@ const PromoCodeModal = ({
 export default function ManageOlympiadPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -162,10 +163,10 @@ export default function ManageOlympiadPage({
         questionsResponse,
         prizesResponse,
       ] = await Promise.all([
-        fetch(`/api/olympiads/${params.id}`),
-        fetch(`/api/olympiads/${params.id}/participants`),
-        fetch(`/api/olympiads/${params.id}/questions`),
-        fetch(`/api/olympiads/${params.id}/prizes`),
+        fetch(`/api/olympiads/${id}`),
+        fetch(`/api/olympiads/${id}/participants`),
+        fetch(`/api/olympiads/${id}/questions`),
+        fetch(`/api/olympiads/${id}/prizes`),
       ]);
 
       if (!olympiadResponse.ok) {
@@ -194,7 +195,7 @@ export default function ManageOlympiadPage({
     } finally {
       setIsLoading(false);
     }
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     fetchData();
@@ -211,7 +212,7 @@ export default function ManageOlympiadPage({
 
     setIsEndingOlympiad(true);
     try {
-      const response = await fetch(`/api/olympiads/${params.id}/end`, {
+      const response = await fetch(`/api/olympiads/${id}/end`, {
         method: 'POST',
       });
 
@@ -240,7 +241,7 @@ export default function ManageOlympiadPage({
 
     setIsReopeningOlympiad(true);
     try {
-      const response = await fetch(`/api/olympiads/${params.id}/reopen`, {
+      const response = await fetch(`/api/olympiads/${id}/reopen`, {
         method: 'POST',
       });
 
@@ -273,7 +274,7 @@ export default function ManageOlympiadPage({
     setIsPromoCodeModalOpen(false);
 
     try {
-      const response = await fetch(`/api/olympiads/${params.id}/send-prizes`, {
+      const response = await fetch(`/api/olympiads/${id}/send-prizes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -507,7 +508,7 @@ export default function ManageOlympiadPage({
                   <h3 className="text-xl font-semibold text-white">Вопросы</h3>
                   <button
                     onClick={() =>
-                      router.push(`/olympiads/${params.id}/questions`)
+                      router.push(`/olympiads/${id}/questions`)
                     }
                     className="px-3 py-1 text-sm font-medium text-white bg-red-700 rounded-lg hover:bg-red-600 transition-colors"
                   >
@@ -648,7 +649,7 @@ export default function ManageOlympiadPage({
                 Назад
               </button>
               <button
-                onClick={() => router.push(`/olympiads/${params.id}/edit`)}
+                onClick={() => router.push(`/olympiads/${id}/edit`)}
                 className={`px-6 py-3 text-sm font-medium rounded-lg transition-colors ${
                   olympiad.isCompleted
                     ? 'text-gray-400 bg-gray-700/30 border border-gray-600/20 cursor-not-allowed'

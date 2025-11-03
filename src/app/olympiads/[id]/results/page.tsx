@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ChineseLoader from '@/components/ChineseLoader';
 
@@ -16,7 +16,8 @@ interface Result {
   };
 }
 
-export default function ResultsPage({ params }: { params: { id: string } }) {
+export default function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [result, setResult] = useState<Result | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +27,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchResult = async () => {
       try {
-        const response = await fetch(`/api/olympiads/${params.id}/result`);
+        const response = await fetch(`/api/olympiads/${id}/result`);
         if (!response.ok) {
           throw new Error('Failed to fetch result');
         }
@@ -40,7 +41,7 @@ export default function ResultsPage({ params }: { params: { id: string } }) {
     };
 
     fetchResult();
-  }, [params.id]);
+  }, [id]);
 
   const downloadCertificate = async () => {
     if (!result?.certificateUrl) return;

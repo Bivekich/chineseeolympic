@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ChineseLoader from '@/components/ChineseLoader';
 
@@ -22,8 +22,9 @@ interface Olympiad {
 export default function EditOlympiadPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [title, setTitle] = useState('');
@@ -45,7 +46,7 @@ export default function EditOlympiadPage({
   useEffect(() => {
     const fetchOlympiad = async () => {
       try {
-        const response = await fetch(`/api/olympiads/${params.id}`);
+        const response = await fetch(`/api/olympiads/${id}`);
         if (response.ok) {
           const data = await response.json();
           console.log('Fetched olympiad data:', data);
@@ -64,7 +65,7 @@ export default function EditOlympiadPage({
           // Проверяем есть ли участники, если олимпиада опубликована
           if (!data[0].isDraft) {
             const participantsResponse = await fetch(
-              `/api/olympiads/${params.id}/participants`
+              `/api/olympiads/${id}/participants`
             );
             if (participantsResponse.ok) {
               const participantsData = await participantsResponse.json();
@@ -86,14 +87,14 @@ export default function EditOlympiadPage({
     };
 
     fetchOlympiad();
-  }, [params.id]);
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/olympiads/${params.id}`, {
+      const response = await fetch(`/api/olympiads/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -120,7 +121,7 @@ export default function EditOlympiadPage({
       alert('Олимпиада успешно обновлена');
 
       if (olympiad?.isDraft) {
-        router.push(`/olympiads/${params.id}/questions`);
+        router.push(`/olympiads/${id}/questions`);
       } else {
         router.push(`/dashboard`);
       }
@@ -374,7 +375,7 @@ export default function EditOlympiadPage({
                 участникам.
               </p>
               <button
-                onClick={() => router.push(`/olympiads/${params.id}/manage`)}
+                onClick={() => router.push(`/olympiads/${id}/manage`)}
                 className="mt-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors"
               >
                 Перейти к управлению

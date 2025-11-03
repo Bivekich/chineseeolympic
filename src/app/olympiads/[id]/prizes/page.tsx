@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import ChineseLoader from "@/components/ChineseLoader";
 
@@ -22,7 +22,8 @@ interface Olympiad {
   hasPrizes: boolean;
 }
 
-export default function PrizesPage({ params }: { params: { id: string } }) {
+export default function PrizesPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [prizes, setPrizes] = useState<Prize[]>([
@@ -38,8 +39,8 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
     const fetchOlympiad = async () => {
       try {
         const [olympiadResponse, prizesResponse] = await Promise.all([
-          fetch(`/api/olympiads/${params.id}`),
-          fetch(`/api/olympiads/${params.id}/prizes`),
+          fetch(`/api/olympiads/${id}`),
+          fetch(`/api/olympiads/${id}/prizes`),
         ]);
 
         if (olympiadResponse.ok) {
@@ -65,7 +66,7 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
     };
 
     fetchOlympiad();
-  }, [params.id]);
+  }, [id]);
 
   const handlePrizeChange = (
     index: number,
@@ -101,7 +102,7 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
     setError(null);
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/olympiads/${params.id}/prizes`, {
+      const response = await fetch(`/api/olympiads/${id}/prizes`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -122,7 +123,7 @@ export default function PrizesPage({ params }: { params: { id: string } }) {
 
       if (publish) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        const verifyResponse = await fetch(`/api/olympiads/${params.id}`);
+        const verifyResponse = await fetch(`/api/olympiads/${id}`);
         if (!verifyResponse.ok) {
           throw new Error("Failed to verify olympiad state");
         }

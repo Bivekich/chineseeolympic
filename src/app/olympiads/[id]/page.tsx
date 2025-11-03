@@ -6,16 +6,17 @@ import { olympiads, prizes } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  const { id } = await params;
   const olympiad = await db.query.olympiads.findFirst({
-    where: eq(olympiads.id, params.id),
+    where: eq(olympiads.id, id),
   });
 
   if (!olympiad) {
@@ -31,8 +32,9 @@ export async function generateMetadata({
 }
 
 export default async function OlympiadPage({ params }: PageProps) {
+  const { id } = await params;
   const olympiad = await db.query.olympiads.findFirst({
-    where: eq(olympiads.id, params.id),
+    where: eq(olympiads.id, id),
   });
 
   if (!olympiad) {

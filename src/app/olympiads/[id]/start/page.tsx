@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ChineseLoader from '@/components/ChineseLoader';
 
@@ -47,8 +47,9 @@ interface MatchingAnswer {
 export default function StartOlympiadPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
   const router = useRouter();
   const [olympiad, setOlympiad] = useState<Olympiad | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -93,10 +94,10 @@ export default function StartOlympiadPage({
       setIsSubmitting(true);
       try {
         // Clear timer data from localStorage
-        localStorage.removeItem(`olympiad_timer_${params.id}`);
-        localStorage.removeItem(`olympiad_answers_${params.id}`);
+        localStorage.removeItem(`olympiad_timer_${id}`);
+        localStorage.removeItem(`olympiad_answers_${id}`);
 
-        const response = await fetch(`/api/olympiads/${params.id}/submit`, {
+        const response = await fetch(`/api/olympiads/${id}/submit`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -108,7 +109,7 @@ export default function StartOlympiadPage({
           throw new Error('Failed to submit answers');
         }
 
-        router.push(`/olympiads/${params.id}/results`);
+        router.push(`/olympiads/${id}/results`);
       } catch (error) {
         console.error('Error submitting answers:', error);
         alert('Ошибка при отправке ответов');
@@ -116,7 +117,7 @@ export default function StartOlympiadPage({
         setIsSubmitting(false);
       }
     },
-    [params.id, answers, isSubmitting, router]
+    [id, answers, isSubmitting, router]
   );
 
   // Функция для обновления presigned URL
@@ -125,7 +126,7 @@ export default function StartOlympiadPage({
 
     try {
       const response = await fetch(
-        `/api/olympiads/${params.id}/media?key=${encodeURIComponent(objectKey)}`
+        `/api/olympiads/${id}/media?key=${encodeURIComponent(objectKey)}`
       );
       if (!response.ok) {
         throw new Error('Failed to refresh presigned URL');
@@ -143,8 +144,8 @@ export default function StartOlympiadPage({
     const fetchData = async () => {
       try {
         const [olympiadResponse, questionsResponse] = await Promise.all([
-          fetch(`/api/olympiads/${params.id}`),
-          fetch(`/api/olympiads/${params.id}/questions`),
+          fetch(`/api/olympiads/${id}`),
+          fetch(`/api/olympiads/${id}/questions`),
         ]);
 
         if (!olympiadResponse.ok || !questionsResponse.ok) {
@@ -170,7 +171,7 @@ export default function StartOlympiadPage({
         }
 
         // Try to load existing scrambled orders from localStorage
-        const scrambledKey = `olympiad_scrambled_${params.id}`;
+        const scrambledKey = `olympiad_scrambled_${id}`;
         const savedScrambled = localStorage.getItem(scrambledKey);
         let scrambledData = savedScrambled ? JSON.parse(savedScrambled) : null;
 
@@ -223,7 +224,7 @@ export default function StartOlympiadPage({
         setQuestions(questionsData);
 
         // Check if we have a saved timer state in localStorage
-        const timerKey = `olympiad_timer_${params.id}`;
+        const timerKey = `olympiad_timer_${id}`;
         const savedEndTime = localStorage.getItem(timerKey);
 
         if (savedEndTime) {
@@ -249,7 +250,7 @@ export default function StartOlympiadPage({
         }
 
         // Also try to load saved answers
-        const answersKey = `olympiad_answers_${params.id}`;
+        const answersKey = `olympiad_answers_${id}`;
         const savedAnswers = localStorage.getItem(answersKey);
         if (savedAnswers) {
           try {
@@ -266,7 +267,7 @@ export default function StartOlympiadPage({
     };
 
     fetchData();
-  }, [params.id, handleSubmit]);
+  }, [id, handleSubmit]);
 
   // Timer effect
   useEffect(() => {
@@ -291,10 +292,10 @@ export default function StartOlympiadPage({
   // Save answers to localStorage whenever they change
   useEffect(() => {
     if (Object.keys(answers).length > 0) {
-      const answersKey = `olympiad_answers_${params.id}`;
+      const answersKey = `olympiad_answers_${id}`;
       localStorage.setItem(answersKey, JSON.stringify(answers));
     }
-  }, [answers, params.id]);
+  }, [answers, id]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
